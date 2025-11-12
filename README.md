@@ -223,7 +223,7 @@ teaching_physics_simulator_enhanced.py
 
 Frei verwendbar für Bildung und Forschung.
 
-**Autor:** Dr. Heinrich  
+**Autor:** Prof. Dr.rer.nat. Dietmar Henrich
 **Version:** 2.0 (Mehrsprachig + Presets)  
 **Datum:** 12. November 2025
 
