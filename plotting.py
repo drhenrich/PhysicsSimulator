@@ -92,22 +92,27 @@ def plot_trajectory_3d(bodies, data, coordinate_system: str = "cartesian"):
 
 def plot_conservation_laws(bodies, data):
     """
-    Plottet die im Simulator berechnete Gesamtenergie als Funktion der Zeit.
+    Plottet die im Simulator berechnete Energie als Funktion der Zeit.
+    Nutzt, falls vorhanden, energy_components/drag_work für detaillierte Darstellung.
     """
     times = data.get("times", None)
     energies = data.get("energies", None)
+    components = data.get("energy_components")
+    drag_work = data.get("drag_work")
 
     if times is None or energies is None:
         raise ValueError("Daten enthalten keine 'times' oder 'energies'.")
 
     if HAS_PLOTLY:
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=times,
-            y=energies,
-            mode="lines",
-            name="Gesamtenergie"
-        ))
+        fig.add_trace(go.Scatter(x=times, y=energies, mode="lines", name="Gesamtenergie"))
+        if components:
+            for key in ("kinetic", "potential_grav", "potential_electric", "potential_spring"):
+                if key in components:
+                    fig.add_trace(go.Scatter(x=times, y=components[key], mode="lines", name=key))
+        if drag_work is not None:
+            cum_work = np.cumsum(drag_work)
+            fig.add_trace(go.Scatter(x=times[: len(cum_work)], y=cum_work, mode="lines", name="Drag Arbeit"))
         fig.update_layout(
             xaxis_title="t",
             yaxis_title="E",
@@ -118,6 +123,12 @@ def plot_conservation_laws(bodies, data):
     elif HAS_MATPLOTLIB:
         fig, ax = plt.subplots()
         ax.plot(times, energies, label="Gesamtenergie")
+        if components:
+            for key in ("kinetic", "potential_grav", "potential_electric", "potential_spring"):
+                if key in components:
+                    ax.plot(times, components[key], label=key)
+        if drag_work is not None:
+            ax.plot(times[: len(drag_work)], np.cumsum(drag_work), label="Drag Arbeit")
         ax.set_xlabel("t")
         ax.set_ylabel("E")
         ax.set_title("Energieverlauf")

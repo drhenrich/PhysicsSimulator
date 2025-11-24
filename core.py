@@ -36,10 +36,11 @@ class Body:
     pos: np.ndarray
     vel: np.ndarray
     mass: float
-    charge: float
     t0: float
     dt: float
     t_end: float
+    charge: float = 0.0
+    radius: float = 0.0
     color: str = None
 
 
@@ -112,8 +113,10 @@ class Simulator:
     def detect_collision(self, i, j):
         bi, bj = self.bodies[i], self.bodies[j]
         dist = np.linalg.norm(bi.pos - bj.pos)
-        min_dist = (bi.mass + bj.mass) ** (1/3) * 0.001
-        return dist < min_dist
+        r_sum = (getattr(bi, "radius", 0.0) or 0.0) + (getattr(bj, "radius", 0.0) or 0.0)
+        if r_sum <= 0:
+            r_sum = (bi.mass + bj.mass) ** (1/3) * 0.001  # fallback auf Massen-basierten Näherungsradius
+        return dist < r_sum
 
     def resolve_collision(self, i, j, time):
         bi, bj = self.bodies[i], self.bodies[j]

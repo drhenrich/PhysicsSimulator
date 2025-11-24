@@ -85,6 +85,7 @@ def export_preset_json(preset_name: str,
             "pos": b.pos.tolist(),
             "vel": b.vel.tolist(),
             "mass": b.mass,
+            "radius": getattr(b, "radius", 0.0),
             "charge": b.charge,
             "t0": b.t0,
             "dt": b.dt,
@@ -126,6 +127,7 @@ def import_preset_json(json_string: str) -> Tuple[List[Body], List[Connection]]:
             t0=float(b["t0"]),
             dt=float(b["dt"]),
             t_end=float(b["t_end"]),
+            radius=float(b.get("radius", 0.0)),
             color=b.get("color"),
         ))
 

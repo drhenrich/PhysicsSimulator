@@ -29,7 +29,7 @@ def build_default_registry() -> Dict[str, Callable[[], object]]:
         for k in dir(scenarios):
             if k.startswith("scenario_") and k not in ("scenario_elastic_collision",):
                 reg[k] = getattr(scenarios, k)
-    except Exception as e:
+    except Exception:
         # No scenarios available — registry remains minimal
         pass
 

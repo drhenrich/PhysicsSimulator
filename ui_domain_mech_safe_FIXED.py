@@ -6,11 +6,13 @@ from matplotlib import pyplot as plt
 
 
 def render_mech_astro_tab():
-    """Mechanik & Astromechanik (Safe Mode) mit Simulation & Visualisierung"""
+    """Mechanik & Himmelsmechanik mit Simulation & Visualisierung"""
+    lang = st.session_state.get("language", "de")
+    tr = lambda de, en: de if lang == "de" else en
     
-    st.subheader("Mechanik & Astromechanik — Safe Mode")
+    st.subheader(tr("Mechanik & Himmelsmechanik", "Mechanics & Celestial Mechanics"))
     
-    mech_tab, astro_tab = st.tabs(["Mechanik (2D)", "Astromechanik (2D)"])
+    mech_tab, astro_tab = st.tabs([tr("Mechanik (2D)", "Mechanics (2D)"), tr("Himmelsmechanik (2D)", "Celestial mechanics (2D)")])
     
     def simulate_mechanics(objects, t_end, dt, interaction_type="Gravitation", connection_type="Keine"):
         """Simuliere Objektbewegungen mit Physik"""
@@ -67,7 +69,7 @@ def render_mech_astro_tab():
     
     def plot_trajectory(trajectory):
         """Plotte die Trajektorie der Objekte"""
-        fig, ax = plt.subplots(figsize=(10, 8))
+        fig, ax = plt.subplots(figsize=(12, 9))
         
         num_objects = trajectory.shape[1]
         colors = plt.cm.tab10(np.linspace(0, 1, num_objects))
@@ -75,14 +77,14 @@ def render_mech_astro_tab():
         for obj_id in range(num_objects):
             x_traj = trajectory[:, obj_id, 0]
             y_traj = trajectory[:, obj_id, 1]
-            ax.plot(x_traj, y_traj, "-", color=colors[obj_id], label=f"Objekt {obj_id + 1}", linewidth=1.5, alpha=0.7)
-            ax.plot(x_traj[-1], y_traj[-1], "o", color=colors[obj_id], markersize=8)  # Endposition
+            ax.plot(x_traj, y_traj, "-", color=colors[obj_id], label=f"Objekt {obj_id + 1}", linewidth=2, alpha=0.7)
+            ax.plot(x_traj[-1], y_traj[-1], "o", color=colors[obj_id], markersize=10)  # Endposition
         
-        ax.set_xlabel("x [m]", fontsize=12)
-        ax.set_ylabel("y [m]", fontsize=12)
-        ax.set_title("Objekttrajektorien", fontsize=14)
+        ax.set_xlabel("x [m]", fontsize=14)
+        ax.set_ylabel("y [m]", fontsize=14)
+        ax.set_title("Objekttrajektorien", fontsize=16, fontweight="bold")
         ax.grid(True, alpha=0.3)
-        ax.legend(loc="best", fontsize=10)
+        ax.legend(loc="best", fontsize=11)
         ax.axis("equal")
         
         plt.tight_layout()
@@ -90,7 +92,7 @@ def render_mech_astro_tab():
     
     def plot_positions(positions, objects):
         """Plotte die Endpositionen und Geschwindigkeiten"""
-        fig, ax = plt.subplots(figsize=(10, 8))
+        fig, ax = plt.subplots(figsize=(12, 9))
         
         num_objects = len(objects)
         colors = plt.cm.tab10(np.linspace(0, 1, num_objects))
@@ -103,94 +105,127 @@ def render_mech_astro_tab():
             # Größe basierend auf Masse (skaliert)
             size = 100 * np.log10(mass + 1)
             
-            ax.scatter(x, y, s=size, color=colors[i], alpha=0.7, edgecolors="black", linewidth=1.5)
-            ax.arrow(x, y, vx * 100, vy * 100, head_width=max(abs(x), abs(y)) * 0.02, 
-                    head_length=max(abs(x), abs(y)) * 0.02, fc=colors[i], ec=colors[i], alpha=0.5)
-            ax.text(x, y + max(abs(x), abs(y)) * 0.05, f"Obj {i + 1}", fontsize=9, ha="center")
+            ax.scatter(x, y, s=size, color=colors[i], alpha=0.7, edgecolors="black", linewidth=2)
+            if abs(vx) > 0.01 or abs(vy) > 0.01:
+                scale_factor = max(abs(x), abs(y)) * 0.1 if max(abs(x), abs(y)) > 0 else 1
+                ax.arrow(x, y, vx * scale_factor, vy * scale_factor, head_width=scale_factor * 0.1, 
+                        head_length=scale_factor * 0.1, fc=colors[i], ec=colors[i], alpha=0.5)
+            ax.text(x, y + max(abs(x), abs(y)) * 0.05, f"Obj {i + 1}", fontsize=10, ha="center")
         
-        ax.set_xlabel("x [m]", fontsize=12)
-        ax.set_ylabel("y [m]", fontsize=12)
-        ax.set_title("Endpositionen & Geschwindigkeitsrichtung", fontsize=14)
+        ax.set_xlabel("x [m]", fontsize=14)
+        ax.set_ylabel("y [m]", fontsize=14)
+        ax.set_title("Endpositionen & Geschwindigkeitsrichtung", fontsize=16, fontweight="bold")
         ax.grid(True, alpha=0.3)
         ax.axis("equal")
         
         plt.tight_layout()
         return fig
     
-    def plot_electric_field(positions, charges, grid_size=100):
-        """Plotte elektrisches Feldlinien und Potentialfeld"""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+    def plot_electric_field(positions, charges, grid_size=80):
+        """Plotte elektrisches Feldlinien und Potentialfeld mit besserer Auflösung"""
+        fig = plt.figure(figsize=(22, 10))  # VERGRÖSSERT von 16x7
+        ax1 = fig.add_subplot(121)
+        ax2 = fig.add_subplot(122)
         
         k_e = 8.988e9  # Coulomb-Konstante
         
-        # Bestimme Grid-Grenzen
-        x_min, x_max = positions[:, 0].min() - 1, positions[:, 0].max() + 1
-        y_min, y_max = positions[:, 1].min() - 1, positions[:, 1].max() + 1
+        # Bestimme Grid-Grenzen mit Padding
+        x_min, x_max = positions[:, 0].min() - 2, positions[:, 0].max() + 2
+        y_min, y_max = positions[:, 1].min() - 2, positions[:, 1].max() + 2
         
-        # Erstelle Grid
+        # Erstelle Grid mit höherer Auflösung
         x = np.linspace(x_min, x_max, grid_size)
         y = np.linspace(y_min, y_max, grid_size)
         X, Y = np.meshgrid(x, y)
         
         # Berechne elektrisches Feld und Potential
-        E_x = np.zeros_like(X)
-        E_y = np.zeros_like(Y)
-        V = np.zeros_like(X)
+        E_x = np.zeros_like(X, dtype=float)
+        E_y = np.zeros_like(Y, dtype=float)
+        V = np.zeros_like(X, dtype=float)
         
         for i in range(len(charges)):
             if charges[i] != 0:
                 dx = X - positions[i, 0]
                 dy = Y - positions[i, 1]
-                r = np.sqrt(dx**2 + dy**2) + 1e-10
+                r = np.sqrt(dx**2 + dy**2) + 1e-8
                 
                 # Elektrisches Feld: E = k*q/r^2 * r_hat
-                E_mag = k_e * charges[i] / (r**2 + 1e-10)
-                E_x += E_mag * dx / r
-                E_y += E_mag * dy / r
+                E_mag = k_e * abs(charges[i]) / (r**2 + 1e-8)
+                
+                # Normalisiere für bessere Visualisierung
+                E_mag = np.clip(E_mag, 0, np.percentile(E_mag, 95))
+                
+                r_hat_x = dx / (r + 1e-8)
+                r_hat_y = dy / (r + 1e-8)
+                
+                if charges[i] > 0:  # Positive Ladung: Feld zeigt nach außen
+                    E_x += E_mag * r_hat_x
+                    E_y += E_mag * r_hat_y
+                else:  # Negative Ladung: Feld zeigt nach innen
+                    E_x -= E_mag * r_hat_x
+                    E_y -= E_mag * r_hat_y
                 
                 # Potential: V = k*q/r
-                V += k_e * charges[i] / r
+                V += k_e * charges[i] / (r + 1e-8)
         
-        # Plot 1: Feldlinien (Quiver-Plot)
-        skip = max(1, grid_size // 15)
-        ax1.quiver(X[::skip, ::skip], Y[::skip, ::skip], 
-                  E_x[::skip, ::skip], E_y[::skip, ::skip], 
-                  alpha=0.6, scale=np.linalg.norm(np.array([E_x, E_y])).max() * 50)
+        # ===== PLOT 1: FELDLINIEN =====
+        E_mag = np.sqrt(E_x**2 + E_y**2) + 1e-10
+        
+        # Normalisiere Feldvektoren für bessere Visualisierung
+        E_x_norm = E_x / (E_mag + 1e-10)
+        E_y_norm = E_y / (E_mag + 1e-10)
+        
+        # Quiver mit besseren Parametern
+        skip = max(1, grid_size // 12)
+        quiver = ax1.quiver(X[::skip, ::skip], Y[::skip, ::skip], 
+                           E_x_norm[::skip, ::skip], E_y_norm[::skip, ::skip], 
+                           E_mag[::skip, ::skip], cmap="viridis", scale=25, scale_units="xy", width=0.004)
         
         # Zeige Ladungen
-        colors = ['red' if q > 0 else 'blue' for q in charges]
-        sizes = [100 * abs(q) for q in charges]
-        ax1.scatter(positions[:, 0], positions[:, 1], s=sizes, c=colors, edgecolors='black', 
-                   linewidth=2, alpha=0.8, zorder=5, label="Ladungen")
+        for i, (pos, q) in enumerate(zip(positions, charges)):
+            if q != 0:
+                color = 'red' if q > 0 else 'blue'
+                size = 300 * abs(q) * 1e6  # Skaliert mit Ladungsbetrag
+                ax1.scatter(pos[0], pos[1], s=size, c=color, edgecolors='black', 
+                           linewidth=2.5, alpha=0.9, zorder=5, marker='+' if q > 0 else '_')
+                ax1.text(pos[0], pos[1] + 0.4, f"q={q:.1e}\nC", fontsize=11, ha="center", 
+                        bbox=dict(boxstyle="round,pad=0.4", facecolor="white", alpha=0.8))
         
-        ax1.set_xlabel("x [m]", fontsize=12)
-        ax1.set_ylabel("y [m]", fontsize=12)
-        ax1.set_title("Elektrische Feldlinien", fontsize=14)
+        ax1.set_xlabel("x [m]", fontsize=14)
+        ax1.set_ylabel("y [m]", fontsize=14)
+        ax1.set_title("Elektrische Feldlinien", fontsize=16, fontweight="bold")
         ax1.grid(True, alpha=0.3)
-        ax1.axis("equal")
-        ax1.legend()
+        ax1.set_aspect("equal")
+        cbar1 = plt.colorbar(quiver, ax=ax1, pad=0.02)
+        cbar1.set_label("Feldstärke [N/C]", fontsize=12)
         
-        # Plot 2: Potentialfeld (Contour)
-        # Normalisiere Potential für bessere Visualisierung
-        V_norm = np.clip(V, V.min(), V.max())
-        levels = np.linspace(V_norm.min(), V_norm.max(), 20)
+        # ===== PLOT 2: POTENTIALFELD =====
+        # Begrenzte Potentialberechnung für bessere Visualisierung
+        V_clipped = np.clip(V, np.percentile(V, 1), np.percentile(V, 99))
         
-        contour = ax2.contourf(X, Y, V_norm, levels=levels, cmap="RdBu_r", alpha=0.8)
-        contour_lines = ax2.contour(X, Y, V_norm, levels=levels, colors="black", alpha=0.3, linewidths=0.5)
-        ax2.clabel(contour_lines, inline=True, fontsize=8)
+        # Contourf mit mehr Levels
+        levels = np.linspace(V_clipped.min(), V_clipped.max(), 30)
+        contourf = ax2.contourf(X, Y, V_clipped, levels=levels, cmap="RdBu_r", alpha=0.9)
+        
+        # Contour-Linien
+        contour_lines = ax2.contour(X, Y, V_clipped, levels=15, colors="black", alpha=0.2, linewidths=0.6)
+        ax2.clabel(contour_lines, inline=True, fontsize=8, fmt="%.1e")
         
         # Zeige Ladungen
-        ax2.scatter(positions[:, 0], positions[:, 1], s=sizes, c=colors, edgecolors='black', 
-                   linewidth=2, alpha=0.8, zorder=5, label="Ladungen")
+        for i, (pos, q) in enumerate(zip(positions, charges)):
+            if q != 0:
+                color = 'red' if q > 0 else 'blue'
+                size = 300 * abs(q) * 1e6
+                ax2.scatter(pos[0], pos[1], s=size, c=color, edgecolors='black', 
+                           linewidth=2.5, alpha=0.9, zorder=5, marker='+' if q > 0 else '_')
         
-        ax2.set_xlabel("x [m]", fontsize=12)
-        ax2.set_ylabel("y [m]", fontsize=12)
-        ax2.set_title("Elektrisches Potential", fontsize=14)
-        ax2.axis("equal")
+        ax2.set_xlabel("x [m]", fontsize=14)
+        ax2.set_ylabel("y [m]", fontsize=14)
+        ax2.set_title("Elektrisches Potential", fontsize=16, fontweight="bold")
+        ax2.set_aspect("equal")
         
-        cbar = plt.colorbar(contour, ax=ax2)
-        cbar.set_label("Potential [V]", fontsize=11)
-        ax2.legend()
+        cbar2 = plt.colorbar(contourf, ax=ax2, pad=0.02)
+        cbar2.set_label("Potential [V]", fontsize=12)
         
         plt.tight_layout()
         return fig
@@ -235,7 +270,7 @@ def render_mech_astro_tab():
                 with col3:
                     st.markdown("**Physikalische Eigenschaften**")
                     mass = st.number_input(f"Masse [kg]##obj{obj_id}", value=st.session_state.mech_objects.get(obj_id, {}).get("mass", 1.0), min_value=0.001, step=0.1, key=f"mech_mass_{obj_id}")
-                    charge = st.number_input(f"Ladung [C]##obj{obj_id}", value=st.session_state.mech_objects.get(obj_id, {}).get("charge", 0.0), step=0.001, key=f"mech_charge_{obj_id}")
+                    charge = st.number_input(f"Ladung [C]##obj{obj_id}", value=st.session_state.mech_objects.get(obj_id, {}).get("charge", 0.0), step=1e-6, format="%.1e", key=f"mech_charge_{obj_id}")
                 
                 st.markdown("---")
                 
@@ -333,7 +368,7 @@ def render_mech_astro_tab():
             charges = np.array([obj["charge"] for obj in objects])
             if interaction_type == "Elektrodynamisch" and np.any(charges != 0):
                 st.markdown("#### Elektrisches Feld & Potential")
-                fig_field = plot_electric_field(final_positions, charges, grid_size=100)
+                fig_field = plot_electric_field(final_positions, charges, grid_size=80)
                 st.pyplot(fig_field)
             
             # Statistiken
@@ -353,95 +388,33 @@ def render_mech_astro_tab():
                     st.metric(f"End vx", f"{final_velocities[i, 0]:.2f} m/s")
     
     # ============================================
-    # ASTROMECHANIK TAB
+    # HIMMELSMECHANIK TAB (Sonne-Erde)
     # ============================================
     with astro_tab:
-        st.markdown("#### Himmelskörper-Konfiguration")
-        
-        num_bodies = st.slider("Anzahl Himmelskörper", 1, 5, 2, key="astro_num_bodies")
-        
-        # Initialisiere Himmelskörper-Storage
-        if "astro_bodies" not in st.session_state:
-            st.session_state.astro_bodies = {}
-        
-        for body_id in range(num_bodies):
-            with st.expander(f"🌍 Himmelskörper {body_id + 1}", expanded=(body_id == 0)):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**Position [m]**")
-                    x = st.number_input(f"x##astro{body_id}", value=st.session_state.astro_bodies.get(body_id, {}).get("x", 0.0), step=1e10, key=f"astro_x_{body_id}")
-                    y = st.number_input(f"y##astro{body_id}", value=st.session_state.astro_bodies.get(body_id, {}).get("y", 1e11), step=1e10, key=f"astro_y_{body_id}")
-                
-                with col2:
-                    st.markdown("**Geschwindigkeit [m/s]**")
-                    vx = st.number_input(f"vx##astro{body_id}", value=st.session_state.astro_bodies.get(body_id, {}).get("vx", 0.0), step=1e3, key=f"astro_vx_{body_id}")
-                    vy = st.number_input(f"vy##astro{body_id}", value=st.session_state.astro_bodies.get(body_id, {}).get("vy", 3e4), step=1e3, key=f"astro_vy_{body_id}")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    mass = st.number_input(f"Masse [kg]##astro{body_id}", value=st.session_state.astro_bodies.get(body_id, {}).get("mass", 1e24), min_value=1e20, step=1e23, key=f"astro_mass_{body_id}")
-                
-                with col2:
-                    name = st.text_input(f"Name##astro{body_id}", value=st.session_state.astro_bodies.get(body_id, {}).get("name", f"Body {body_id + 1}"), key=f"astro_name_{body_id}")
-                
-                # Speichere Himmelskörper-Daten
-                st.session_state.astro_bodies[body_id] = {
-                    "x": x, "y": y,
-                    "vx": vx, "vy": vy,
-                    "mass": mass,
-                    "name": name
-                }
-        
-        st.markdown("---")
-        
-        # Astro-Simulationsparameter
-        st.markdown("#### Simulationsparameter")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            N = st.selectbox("Raster N (Anzeige)", [256, 384, 512, 768], index=0, key="astroN")
-        
-        with col2:
-            t_end = st.number_input("t_end [s]", min_value=1e6, max_value=1e9, value=1e8, step=1e7, key="astro_t_end")
-        
-        with col3:
-            dt = st.number_input("dt [s]", min_value=1e4, max_value=1e6, value=1e5, step=1e4, key="astro_dt")
-        
-        if st.button("▶️ Simulation starten##astro", use_container_width=True):
-            st.info("⏳ Berechne Astro-Simulation...")
-            
-            # Sammle Himmelskörper-Daten als Objects
-            bodies = []
-            for body_id in range(num_bodies):
-                body_data = st.session_state.astro_bodies[body_id]
-                bodies.append({
-                    "x": body_data["x"],
-                    "y": body_data["y"],
-                    "vx": body_data["vx"],
-                    "vy": body_data["vy"],
-                    "mass": body_data["mass"],
-                    "charge": 0.0
-                })
-            
-            # Führe Simulation durch (nur Gravitation)
-            trajectory, final_positions, final_velocities = simulate_mechanics(
-                bodies, int(t_end), int(dt), interaction_type="Gravitation"
-            )
-            
-            st.success("✅ Astro-Simulation abgeschlossen!")
-            
-            # Zeige Ergebnisse
-            st.markdown("#### Simulationsergebnisse")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**Orbits**")
-                fig_traj = plot_trajectory(trajectory)
-                st.pyplot(fig_traj)
-            
-            with col2:
-                st.markdown("**Endpositionen**")
-                fig_pos = plot_positions(final_positions, bodies)
-                st.pyplot(fig_pos)
+        st.markdown("#### Himmelsmechanik: Sonne-Erde-Zweikörper-System")
+
+        n_steps = st.slider("Zeitschritte", 90, 1000, 365, step=10, key="astro_steps")
+        dt_days = st.number_input("Zeitschritt [Tage]", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="astro_dt_days")
+
+        if st.button("▶️ Orbit simulieren", use_container_width=True):
+            st.info("⏳ Berechne Orbit...")
+            try:
+                from solar_system import two_body_orbit, AU
+            except Exception as e:
+                st.error(f"Solar-System-Modul nicht verfügbar: {e}")
+            else:
+                rs, _ = two_body_orbit(n_steps=int(n_steps), dt=float(dt_days)*86400.0)
+                x = rs[:, 0] / AU
+                y = rs[:, 1] / AU
+
+                fig, ax = plt.subplots(figsize=(8, 8))
+                ax.plot(0, 0, "yo", markersize=12, label="Sonne")
+                ax.plot(x, y, "b-", label="Erde-Bahn")
+                ax.plot(x[0], y[0], "bo", markersize=6, label="Start")
+                ax.set_xlabel("x [AU]")
+                ax.set_ylabel("y [AU]")
+                ax.set_title("Sonne-Erde Orbit (2D)")
+                ax.grid(True, alpha=0.3)
+                ax.set_aspect("equal", "box")
+                ax.legend()
+                st.pyplot(fig)

@@ -1,0 +1,92 @@
+PRESENTS_BLOCH = {
+    "Standard": {"T1":1000.0, "T2":80.0, "TR":800.0, "TE":20.0},
+    "Lang T1": {"T1":2400.0, "T2":120.0, "TR":3000.0, "TE":80.0}
+}
+preset_choice = st.selectbox("Bloch-Preset wählen", [""] + list(PRESENTS_BLOCH.keys()))
+if preset_choice and st.button("Preset laden"):
+    p = PRESENTS_BLOCH[preset_choice]
+    for k, v in p.items():
+        st.session_state[f"b{k}"] = v
+
+T1 = st.number_input("T1 [ms]", 100.0, 3000.0, st.session_state.get("bT1", 1000.0), 50.0, key="bT1")
+T2 = st.number_input("T2 [ms]", 10.0, 500.0, st.session_state.get("bT2", 80.0), 5.0, key="bT2")
+TR = st.number_input("TR [ms]", 50.0, 4000.0, st.session_state.get("bTR", 800.0), 25.0, key="bTR")
+TE = st.number_input("TE [ms]", 5.0, 200.0, st.session_state.get("bTE", 20.0), 5.0, key="bTE")
+
+PRESENTS_OPT_WAVE = {
+    "Einzelspalt 532nm": {"N":256, "lam":532.0, "z":1.0, "method":"Fraunhofer", "shape":"Einzelspalt", "w":0.1, "p":0.2, "incoh": 1.0},
+    "Doppelspalt": {"N":256, "lam":532.0, "z":1.0, "method":"Fraunhofer", "shape":"Doppelspalt", "w":0.1, "p":0.3, "incoh": 1.0}
+}
+preset_choice = st.selectbox("Optik-Wellen-Preset wählen", [""] + list(PRESENTS_OPT_WAVE.keys()))
+if preset_choice and st.button("Preset laden"):
+    p = PRESENTS_OPT_WAVE[preset_choice]
+    for k, v in p.items():
+        st.session_state[f"opt_{k}"] = v
+
+N = st.selectbox("Raster N", [128,256,384], index=1, key="opt_N")
+lam = st.number_input("Wellenlänge [nm]", 400.0, 700.0, st.session_state.get("opt_lam", 532.0), key="opt_lam")
+z = st.number_input("Abstand z [m]", 0.1, 2.0, st.session_state.get("opt_z", 1.0), key="opt_z")
+method = st.selectbox("Methode", ["Fraunhofer","Fresnel"], index=0, key="opt_method")
+shape = st.selectbox("Aperturform", ["Einzelspalt","Doppelspalt","Gitter"], index=0, key="opt_shape")
+w = st.number_input("Spaltbreite [mm]", 0.05,1.0, st.session_state.get("opt_w", 0.1), key="opt_w")
+p = st.number_input("Periode [mm]", 0.05,1.0, st.session_state.get("opt_p", 0.2), key="opt_p")
+incoh = st.slider("Teilkohärenz", 0.0,1.0, st.session_state.get("opt_incoh", 1.0), 0.05, key="opt_incoh")
+# === Direkt vor st.form("ct_form_fast") einbauen:
+PRESENTS_CT = {
+    "Shepp-Logan Schnell": {
+        "phantom":"Shepp-Logan", "N":128, "geom":"Parallel", "ndet":180, "nproj":120, "kVp":80.0, "filt":2.5, "poly":False, "noise":0.0, "budget":4
+    },
+    "Knochen/Luft Scan": {
+        "phantom":"Zylinder (Wasser/Knochen/Luft)", "N":192, "geom":"Parallel", "ndet":256, "nproj":180, "kVp":120.0, "filt":5.0, "poly":True, "noise":0.01, "budget":6
+    }
+}
+preset_choice = st.selectbox("CT-Preset wählen", [""] + list(PRESENTS_CT.keys()))
+if preset_choice and st.button("Preset laden"):
+    p = PRESENTS_CT[preset_choice]
+    for k, v in p.items():
+        st.session_state[f"ct_{k}"] = v
+
+# Die nachfolgenden Input-Felder in der Form:
+phantom = st.selectbox("Phantom", ["Shepp-Logan","Zylinder (Wasser/Knochen/Luft)"], index=0, key="ct_phantom")
+N = st.selectbox("Bildgröße N", [128,192,256], index=0, key="ct_N")
+geom = st.selectbox("Geometrie", ["Parallel"], index=0, key="ct_geom")
+ndet = st.number_input("Detektorelemente", 90, 720, st.session_state.get("ct_ndet", 180), key="ct_ndet")
+nproj = st.number_input("Projektionen", 30, 720, st.session_state.get("ct_nproj", 120), key="ct_nproj")
+kVp = st.number_input("kVp", 40.0, 140.0, st.session_state.get("ct_kVp", 80.0), key="ct_kVp")
+filt = st.number_input("Filtration mm Al", 0.0, 10.0, st.session_state.get("ct_filt", 2.5), key="ct_filt")
+poly = st.checkbox("Polychromatisch", value=st.session_state.get("ct_poly", False), key="ct_poly")
+noise = st.slider("Detektor-Rauschen", 0.0, 0.05, st.session_state.get("ct_noise", 0.0), 0.005, key="ct_noise")
+budget = st.slider("Zeitbudget [s]", 1, 10, st.session_state.get("ct_budget", 4), 1, key="ct_budget")
+
+# === Einfügen direkt nach "with mech_tab:"
+PRESENTS_MECH = {
+    "2 Teilchenstoß": {"n":2, "positions":[[-0.5, 0.2],[0.5, -0.2]], "velocities":[[0.5, 0.2],[-0.6, 0]], "t_end":10.0, "dt":0.02},
+    "Kreisbewegung": {"n":1, "positions":[[0.0, 1.0]], "velocities":[[-1.0, 0.0]], "t_end":6.0, "dt":0.01}
+}
+preset_choice = st.selectbox("Mechanik-Preset wählen", [""] + list(PRESENTS_MECH.keys()))
+if preset_choice and st.button("Preset laden"):
+    preset = PRESENTS_MECH[preset_choice]
+    st.session_state["mech_n"] = preset["n"]
+    st.session_state["mech_t_end"] = preset["t_end"]
+    st.session_state["mech_dt"] = preset["dt"]
+    for i in range(preset["n"]):
+        st.session_state[f"mech_pos_{i}_x"] = preset["positions"][i][0]
+        st.session_state[f"mech_pos_{i}_y"] = preset["positions"][i][1]
+        st.session_state[f"mech_v_{i}_x"] = preset["velocities"][i][0]
+        st.session_state[f"mech_v_{i}_y"] = preset["velocities"][i][1]
+
+# Danach das bestehende st.form("mech_safe") bauen!
+# Verwende in der Form:
+n = st.number_input("Anzahl Objekte", min_value=1, max_value=10, value=st.session_state.get("mech_n", 2), key="mech_n")
+t_end = st.number_input("t_end [s]", min_value=0.1, max_value=20.0, value=st.session_state.get("mech_t_end", 6.0), key="mech_t_end")
+dt = st.number_input("dt [s]", min_value=0.001, max_value=0.5, value=st.session_state.get("mech_dt", 0.02), key="mech_dt")
+positions, velocities = [], []
+for i in range(int(n)):
+    x = st.number_input(f"Objekt {i+1} x", -1.0, 1.0, st.session_state.get(f"mech_pos_{i}_x", 0.0), key=f"mech_pos_{i}_x")
+    y = st.number_input(f"Objekt {i+1} y", -1.0, 1.0, st.session_state.get(f"mech_pos_{i}_y", 0.0), key=f"mech_pos_{i}_y")
+    vx = st.number_input(f"Objekt {i+1} vx", -2.0, 2.0, st.session_state.get(f"mech_v_{i}_x", 0.0), key=f"mech_v_{i}_x")
+    vy = st.number_input(f"Objekt {i+1} vy", -2.0, 2.0, st.session_state.get(f"mech_v_{i}_y", 0.0), key=f"mech_v_{i}_y")
+    positions.append([x, y]); velocities.append([vx, vy])
+# Rest der Simulation bleibt wie gehabt!
+
+
