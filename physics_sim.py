@@ -57,7 +57,7 @@ st.markdown("---")
 # TAB-IMPORTS UND ABBRUCHSICHERUNG
 # ============================================
 try:
-    from ui_domain_mech_safe import render_mech_astro_tab
+    from ui_domain_mech_safe_FIXED import render_mech_astro_tab
 except Exception as e:
     render_mech_astro_tab = None
     mech_err = str(e)
