@@ -10,6 +10,7 @@ from ui_thermo_bundle import render_thermo_tab
 from ui_atom_bundle import render_atom_tab
 from ui_ultrasound import render_ultrasound_tab
 from ui_nuclear_bundle import render_nuclear_tab
+from ui_oscillations_bundle import render_oscillations_tab
 
 st.set_page_config(page_title=get_text("title", "de"), page_icon="🧩", layout="wide", initial_sidebar_state="expanded")
 
@@ -44,6 +45,7 @@ tabs_labels = [
     get_text("mechanics", lang) or "Mechanik & Himmelsmechanik",
     get_text("thermodynamics", lang) or "Thermodynamik",
     get_text("atom_physics", lang) or "Atomphysik",
+    get_text("oscillations", lang) or "Schwingungen",
     get_text("optics", lang) or "Optik",
     get_text("xray_ct_classic", lang) or "Xray/CT",
     get_text("mri_imaging", lang) or "MRI & Bloch",
@@ -90,39 +92,44 @@ with selected_tabs[2]:
     st.markdown(f"# {tabs_labels[2]}")
     render_atom_tab()
 
-# Tab 3: Optics
+# Tab 3: Oscillations (NEU!)
 with selected_tabs[3]:
     st.markdown(f"# {tabs_labels[3]}")
-    render_optics_combo_tab()
+    render_oscillations_tab()
 
-# Tab 4: Xray/CT combined
+# Tab 4: Optics
 with selected_tabs[4]:
     st.markdown(f"# {tabs_labels[4]}")
+    render_optics_combo_tab()
+
+# Tab 5: Xray/CT combined
+with selected_tabs[5]:
+    st.markdown(f"# {tabs_labels[5]}")
     subtab_classic, subtab_safe = st.tabs(["Klassisch", "Reduziert"])
     with subtab_classic:
         render_xray_ct_tab()
     with subtab_safe:
         render_ct_safe_tab()
 
-# Tab 5: MRI & Bloch
-with selected_tabs[5]:
-    st.markdown(f"# {tabs_labels[5]}")
-    render_mri_bloch_tab()
-
-# Tab 6: Ultrasound (NEU!)
+# Tab 6: MRI & Bloch
 with selected_tabs[6]:
     st.markdown(f"# {tabs_labels[6]}")
-    render_ultrasound_tab()
+    render_mri_bloch_tab()
 
-# Tab 7: Nuclear Physics (NEU!)
+# Tab 7: Ultrasound (NEU!)
 with selected_tabs[7]:
     st.markdown(f"# {tabs_labels[7]}")
-    render_nuclear_tab()
+    render_ultrasound_tab()
 
-# Tab 8: Electrodynamics
+# Tab 8: Nuclear Physics (NEU!)
 with selected_tabs[8]:
     st.markdown(f"# {tabs_labels[8]}")
+    render_nuclear_tab()
+
+# Tab 9: Electrodynamics
+with selected_tabs[9]:
+    st.markdown(f"# {tabs_labels[9]}")
     render_em_tab()
 
 st.markdown("---")
-st.markdown("🧩 Physics Simulator | Bilingual Edition | v5.0 mit Mechanik, Thermodynamik, Atomphysik, Ultraschall & Kernphysik")
+st.markdown("🧩 Physics Simulator | Bilingual Edition | v6.0 mit Schwingungen & Akustik")
