@@ -70,17 +70,26 @@ with selected_tabs[0]:
         if not preset_adv:
             st.warning(get_text("choose_preset_warning", lang))
         else:
-            bodies, connections, note = PRESETS_ENHANCED[preset_adv]()
-            sim = Simulator(bodies=bodies, connections=connections, restitution=restitution, drag=drag)
-            results = sim.run()
-            st.success(get_text("adv_success", lang).format(preset=preset_adv, note=note))
-            fig_traj = plot_trajectory_3d(bodies, results)
-            if fig_traj is not None: st.plotly_chart(fig_traj, use_container_width=True)
-            fig_energy = plot_conservation_laws(bodies, results)
-            if fig_energy is not None: st.plotly_chart(fig_energy, use_container_width=True)
-            if sim.collision_events:
-                fig_col = plot_collision_analysis(sim.collision_events)
-                if fig_col is not None: st.plotly_chart(fig_col, use_container_width=True)
+            try:
+                with st.spinner("Berechne Simulation..." if lang == "de" else "Computing simulation..."):
+                    bodies, connections, note = PRESETS_ENHANCED[preset_adv]()
+                    sim = Simulator(bodies=bodies, connections=connections, restitution=restitution, drag=drag)
+                    results = sim.run()
+                st.success(get_text("adv_success", lang).format(preset=preset_adv, note=note))
+                fig_traj = plot_trajectory_3d(bodies, results)
+                if fig_traj is not None: 
+                    st.plotly_chart(fig_traj, use_container_width=True)
+                else:
+                    st.info("Keine Trajektorien-Daten verfügbar." if lang == "de" else "No trajectory data available.")
+                fig_energy = plot_conservation_laws(bodies, results)
+                if fig_energy is not None: 
+                    st.plotly_chart(fig_energy, use_container_width=True)
+                if sim.collision_events:
+                    fig_col = plot_collision_analysis(sim.collision_events)
+                    if fig_col is not None: 
+                        st.plotly_chart(fig_col, use_container_width=True)
+            except Exception as e:
+                st.error(f"Fehler bei der Simulation: {e}" if lang == "de" else f"Simulation error: {e}")
 
 # Tab 1: Thermodynamics (NEU!)
 with selected_tabs[1]:

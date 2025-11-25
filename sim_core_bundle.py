@@ -159,12 +159,21 @@ def plot_trajectory_3d(bodies, data):
     positions = data.get("positions", {})
     if HAS_PLOTLY:
         fig = go.Figure()
+        colors = ['red', 'blue', 'green', 'orange', 'purple', 'cyan', 'magenta', 'yellow', 'lime', 'pink']
         for i, b in enumerate(bodies):
             pos = positions.get(i)
-            if pos is None:
+            if pos is None or len(pos) == 0:
                 continue
             x, y, z = pos[:,0], pos[:,1], pos[:,2]
-            fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode="lines", name=b.name))
+            color = getattr(b, 'color', None) or colors[i % len(colors)]
+            fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode="lines", line=dict(color=color, width=3), name=b.name))
+            fig.add_trace(go.Scatter3d(x=[x[-1]], y=[y[-1]], z=[z[-1]], mode="markers", 
+                marker=dict(size=8, color=color), showlegend=False))
+        fig.update_layout(
+            title="3D-Trajektorien / 3D Trajectories",
+            scene=dict(aspectmode='data', xaxis_title='x [m]', yaxis_title='y [m]', zaxis_title='z [m]'),
+            height=600, margin=dict(l=0, r=0, t=40, b=0)
+        )
         return fig
     elif HAS_MATPLOTLIB:
         fig = plt.figure(); ax = fig.add_subplot(111, projection="3d")
@@ -179,10 +188,17 @@ def plot_trajectory_3d(bodies, data):
 
 def plot_conservation_laws(bodies, data):
     times = data.get("times"); energies = data.get("energies")
-    if times is None or energies is None:
+    if times is None or energies is None or len(times) == 0:
         return None
     if HAS_PLOTLY:
-        fig = go.Figure(); fig.add_trace(go.Scatter(x=times, y=energies, mode="lines", name="E")); return fig
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=times, y=energies, mode="lines", name="Gesamtenergie / Total Energy", line=dict(color='blue', width=2)))
+        fig.update_layout(
+            title="Energieerhaltung / Energy Conservation",
+            xaxis_title="Zeit t [s]", yaxis_title="Energie E [J]",
+            height=350, margin=dict(l=60, r=20, t=40, b=40)
+        )
+        return fig
     elif HAS_MATPLOTLIB:
         fig, ax = plt.subplots(); ax.plot(times, energies); ax.set_xlabel("t"); ax.set_ylabel("E"); return fig
     return None
@@ -195,7 +211,15 @@ def plot_collision_analysis(collision_events):
     dP = [ev.momentum_after - ev.momentum_before for ev in collision_events]
     dE = [ev.energy_after - ev.energy_before for ev in collision_events]
     if HAS_PLOTLY:
-        fig = go.Figure(); fig.add_bar(x=times, y=dP, name="Δp"); fig.add_bar(x=times, y=dE, name="ΔE"); return fig
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=times, y=dP, name="Δp [kg·m/s]", marker_color='blue'))
+        fig.add_trace(go.Bar(x=times, y=dE, name="ΔE [J]", marker_color='red'))
+        fig.update_layout(
+            title="Stoßanalyse / Collision Analysis",
+            xaxis_title="Zeit t [s]", yaxis_title="Änderung",
+            barmode='group', height=350, margin=dict(l=60, r=20, t=40, b=40)
+        )
+        return fig
     elif HAS_MATPLOTLIB:
         fig, ax = plt.subplots(); ax.bar(times, dP); ax.bar(times, dE, alpha=0.7); return fig
     return None
