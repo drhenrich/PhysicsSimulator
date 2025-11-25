@@ -307,7 +307,7 @@ def render_em_tab():
         # Feldlinien hinzufügen
         if show_field_lines:
             lines_x, lines_y = compute_field_lines(X, Y, Ex, Ey, charges)
-            for lx, ly in lines_x:
+            for lx, ly in zip(lines_x, lines_y):
                 fig.add_trace(
                     go.Scatter(
                         x=lx, y=ly,
