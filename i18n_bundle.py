@@ -82,6 +82,28 @@ TRANSLATIONS = {
     "point_scatter_psf": {"de": "Punktstreuer-PSF", "en": "Point Scatter PSF"},
     "carotid_phantom": {"de": "Carotis-Phantom", "en": "Carotid Phantom"},
     "simulate": {"de": "Simulieren", "en": "Simulate"},
+    
+    # Kernphysik & Strahlenschutz
+    "nuclear_physics": {"de": "☢️ Kernphysik", "en": "☢️ Nuclear Physics"},
+    "nuclear_title": {"de": "☢️ Kernphysik & Strahlenschutz", "en": "☢️ Nuclear Physics & Radiation Protection"},
+    "radioactive_decay": {"de": "Radioaktiver Zerfall", "en": "Radioactive Decay"},
+    "decay_chains": {"de": "Zerfallsreihen", "en": "Decay Chains"},
+    "dosimetry": {"de": "Dosimetrie", "en": "Dosimetry"},
+    "shielding": {"de": "Abschirmung", "en": "Shielding"},
+    "half_life": {"de": "Halbwertszeit", "en": "Half-life"},
+    "decay_constant": {"de": "Zerfallskonstante", "en": "Decay constant"},
+    "activity": {"de": "Aktivität", "en": "Activity"},
+    "radionuclide": {"de": "Radionuklid", "en": "Radionuclide"},
+    "decay_type": {"de": "Zerfallsart", "en": "Decay type"},
+    "dose_rate": {"de": "Dosisleistung", "en": "Dose rate"},
+    "distance": {"de": "Abstand", "en": "Distance"},
+    "exposure_time": {"de": "Aufenthaltszeit", "en": "Exposure time"},
+    "dose_limit": {"de": "Dosisgrenzwert", "en": "Dose limit"},
+    "shielding_material": {"de": "Abschirmmaterial", "en": "Shielding material"},
+    "transmission": {"de": "Transmission", "en": "Transmission"},
+    "hvl": {"de": "Halbwertsschichtdicke", "en": "Half-value layer"},
+    "tvl": {"de": "Zehntelwertsschichtdicke", "en": "Tenth-value layer"},
+    "attenuation_coeff": {"de": "Schwächungskoeffizient", "en": "Attenuation coefficient"},
 }
 
 

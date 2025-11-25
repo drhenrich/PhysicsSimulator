@@ -9,6 +9,7 @@ from ui_med_bundle import render_ct_safe_tab, render_xray_ct_tab, render_mri_blo
 from ui_thermo_bundle import render_thermo_tab
 from ui_atom_bundle import render_atom_tab
 from ui_ultrasound import render_ultrasound_tab
+from ui_nuclear_bundle import render_nuclear_tab
 
 st.set_page_config(page_title=get_text("title", "de"), page_icon="🧩", layout="wide", initial_sidebar_state="expanded")
 
@@ -47,6 +48,7 @@ tabs_labels = [
     get_text("xray_ct_classic", lang) or "Xray/CT",
     get_text("mri_imaging", lang) or "MRI & Bloch",
     get_text("ultrasound", lang) or "Ultraschall",
+    get_text("nuclear_physics", lang) or "Kernphysik",
     get_text("electromagnetism", lang) or "Elektrodynamik"
 ]
 selected_tabs = st.tabs(tabs_labels)
@@ -112,10 +114,15 @@ with selected_tabs[6]:
     st.markdown(f"# {tabs_labels[6]}")
     render_ultrasound_tab()
 
-# Tab 7: Electrodynamics
+# Tab 7: Nuclear Physics (NEU!)
 with selected_tabs[7]:
     st.markdown(f"# {tabs_labels[7]}")
+    render_nuclear_tab()
+
+# Tab 8: Electrodynamics
+with selected_tabs[8]:
+    st.markdown(f"# {tabs_labels[8]}")
     render_em_tab()
 
 st.markdown("---")
-st.markdown("🧩 Physics Simulator | Bilingual Edition | v4.0 mit Mechanik, Thermodynamik, Atomphysik & Ultraschall")
+st.markdown("🧩 Physics Simulator | Bilingual Edition | v5.0 mit Mechanik, Thermodynamik, Atomphysik, Ultraschall & Kernphysik")
