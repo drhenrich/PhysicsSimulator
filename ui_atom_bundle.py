@@ -445,90 +445,96 @@ def render_bohr_tab():
 
 
 def run_bohr_animation(n_initial: int, n_final: int, radii: dict, n_max: int, color_hex: str, wavelength: float):
-    """Animation des Elektronenübergangs"""
+    """Animation des Elektronenübergangs mit Plotly Frames"""
     import plotly.graph_objects as go
     
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
-    chart_placeholder = st.empty()
-    info_placeholder = st.empty()
-    
     n_frames = 60
     r_start = radii[n_initial] / radii[n_max]
     r_end = radii[n_final] / radii[n_max]
     
+    # Bahnen vorbereiten
+    theta = np.linspace(0, 2*np.pi, 100)
+    orbit_traces = []
+    for n in range(1, n_max + 1):
+        r = radii[n] / radii[n_max]
+        x = r * np.cos(theta)
+        y = r * np.sin(theta)
+        line_color = color_hex if n in [n_initial, n_final] else 'lightgray'
+        line_width = 2 if n in [n_initial, n_final] else 1
+        orbit_traces.append(go.Scatter(
+            x=x, y=y, mode='lines',
+            line=dict(color=line_color, width=line_width),
+            showlegend=False, hoverinfo='skip'
+        ))
+    
+    # Frames erstellen
+    frames = []
     for frame in range(n_frames):
         t = frame / (n_frames - 1)
-        
-        # Elektron spiralt nach innen
         r_current = r_start + (r_end - r_start) * t
-        angle = t * 4 * np.pi  # Mehrere Umdrehungen
+        angle = t * 4 * np.pi
         
         x_electron = r_current * np.cos(angle)
         y_electron = r_current * np.sin(angle)
         
-        fig = go.Figure()
+        frame_data = [
+            go.Scatter(x=[0], y=[0], mode='markers',
+                      marker=dict(size=20, color='red'), showlegend=False),
+            go.Scatter(x=[x_electron], y=[y_electron], mode='markers',
+                      marker=dict(size=15, color='blue'), showlegend=False)
+        ]
         
-        # Kern
-        fig.add_trace(go.Scatter(
-            x=[0], y=[0],
-            mode='markers',
-            marker=dict(size=20, color='red'),
-            showlegend=False
-        ))
-        
-        # Bahnen
-        theta = np.linspace(0, 2*np.pi, 100)
-        for n in range(1, n_max + 1):
-            r = radii[n] / radii[n_max]
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
-            line_color = color_hex if n in [n_initial, n_final] else 'lightgray'
-            line_width = 2 if n in [n_initial, n_final] else 1
-            fig.add_trace(go.Scatter(
-                x=x, y=y,
-                mode='lines',
-                line=dict(color=line_color, width=line_width),
-                showlegend=False
-            ))
-        
-        # Elektron
-        fig.add_trace(go.Scatter(
-            x=[x_electron], y=[y_electron],
-            mode='markers',
-            marker=dict(size=15, color='blue'),
-            showlegend=False
-        ))
-        
-        # Photon (erscheint ab Mitte der Animation)
+        # Photon ab Mitte
         if t > 0.5:
             photon_t = (t - 0.5) * 2
             photon_x = r_end + photon_t * 0.5
-            fig.add_trace(go.Scatter(
-                x=[photon_x], y=[0],
-                mode='markers',
-                marker=dict(size=10, color=color_hex, symbol='star'),
-                name='γ',
+            frame_data.append(go.Scatter(
+                x=[photon_x], y=[0], mode='markers',
+                marker=dict(size=12, color=color_hex, symbol='star'),
                 showlegend=False
             ))
         
-        fig.update_layout(
-            title=tr(f"Übergang n={n_initial} → n={n_final}", f"Transition n={n_initial} → n={n_final}"),
-            xaxis=dict(range=[-1.3, 1.5], scaleanchor="y", visible=False),
-            yaxis=dict(range=[-1.3, 1.3], visible=False),
-            height=400
-        )
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        info_placeholder.info(tr(
-            f"Frame {frame + 1}/{n_frames} | Photon: λ = {wavelength:.1f} nm",
-            f"Frame {frame + 1}/{n_frames} | Photon: λ = {wavelength:.1f} nm"
-        ))
-        
-        time.sleep(0.05)
+        frames.append(go.Frame(data=frame_data, name=str(frame)))
     
-    st.success(tr("✅ Animation abgeschlossen — Photon emittiert!", "✅ Animation complete — Photon emitted!"))
+    # Initiale Figur
+    fig = go.Figure(
+        data=[
+            go.Scatter(x=[0], y=[0], mode='markers',
+                      marker=dict(size=20, color='red'), name=tr('Kern', 'Nucleus')),
+            go.Scatter(x=[r_start], y=[0], mode='markers',
+                      marker=dict(size=15, color='blue'), name=tr('Elektron', 'Electron'))
+        ] + orbit_traces,
+        frames=frames
+    )
+    
+    fig.update_layout(
+        title=tr(f"Übergang n={n_initial} → n={n_final} (λ = {wavelength:.1f} nm)",
+                f"Transition n={n_initial} → n={n_final} (λ = {wavelength:.1f} nm)"),
+        xaxis=dict(range=[-1.3, 1.5], scaleanchor="y", visible=False),
+        yaxis=dict(range=[-1.3, 1.3], visible=False),
+        height=420,
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 50, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(tr(f"💡 Elektron fällt von n={n_initial} auf n={n_final}, Photon wird emittiert.",
+                  f"💡 Electron falls from n={n_initial} to n={n_final}, photon is emitted."))
 
 
 def render_photoeffect_tab():
@@ -649,14 +655,11 @@ def render_photoeffect_tab():
 
 
 def run_photoeffect_animation(E_kin: float, intensity: float, light_color: str):
-    """Animation der Photoemission"""
+    """Animation der Photoemission mit Plotly Frames"""
     import plotly.graph_objects as go
     
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
-    
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
     
     n_frames = 80
     n_electrons = int(5 * intensity)
@@ -675,51 +678,90 @@ def run_photoeffect_animation(E_kin: float, intensity: float, light_color: str):
             'y0': 0
         })
     
+    # Frames vorberechnen
+    frames = []
     for frame in range(n_frames):
-        fig = go.Figure()
+        frame_data = []
         
-        # Metalloberfläche
-        fig.add_shape(type="rect", x0=-1, y0=-0.5, x1=1, y1=0,
-                     fillcolor="#708090", line=dict(color="gray"))
+        # Metalloberfläche (als Scatter für Frames)
+        frame_data.append(go.Scatter(
+            x=[-1, 1, 1, -1, -1], y=[-0.5, -0.5, 0, 0, -0.5],
+            fill='toself', fillcolor='#708090',
+            line=dict(color='gray'), showlegend=False, hoverinfo='skip'
+        ))
         
         # Einfallendes Licht (Photonen)
+        photon_x, photon_y = [], []
         for i in range(3):
-            photon_y = 1.5 - (frame * 0.05 + i * 0.3) % 2
-            if photon_y > 0:
-                fig.add_trace(go.Scatter(
-                    x=[0.5 - i * 0.3], y=[photon_y],
-                    mode='markers',
-                    marker=dict(size=8, color=light_color, symbol='diamond'),
-                    showlegend=False
-                ))
+            py = 1.5 - (frame * 0.05 + i * 0.3) % 2
+            if py > 0:
+                photon_x.append(0.5 - i * 0.3)
+                photon_y.append(py)
+        
+        if photon_x:
+            frame_data.append(go.Scatter(
+                x=photon_x, y=photon_y, mode='markers',
+                marker=dict(size=10, color=light_color, symbol='diamond'),
+                showlegend=False
+            ))
         
         # Emittierte Elektronen
+        elec_x, elec_y = [], []
         for e in electrons:
             if frame >= e['start']:
                 t = (frame - e['start']) * 0.05
                 x = e['x0'] + e['speed'] * np.sin(e['angle']) * t
                 y = e['y0'] + e['speed'] * np.cos(e['angle']) * t
-                
                 if y < 2:
-                    fig.add_trace(go.Scatter(
-                        x=[x], y=[y],
-                        mode='markers',
-                        marker=dict(size=8, color='blue'),
-                        showlegend=False
-                    ))
+                    elec_x.append(x)
+                    elec_y.append(y)
         
-        fig.update_layout(
-            title=tr("Photoemission", "Photoemission"),
-            xaxis=dict(range=[-1.5, 1.5], visible=False),
-            yaxis=dict(range=[-0.6, 2], visible=False),
-            height=350
-        )
+        if elec_x:
+            frame_data.append(go.Scatter(
+                x=elec_x, y=elec_y, mode='markers',
+                marker=dict(size=8, color='blue'),
+                showlegend=False
+            ))
         
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((frame + 1) / n_frames)
-        time.sleep(0.03)
+        frames.append(go.Frame(data=frame_data, name=str(frame)))
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation complete"))
+    # Initiale Figur
+    fig = go.Figure(
+        data=[
+            go.Scatter(x=[-1, 1, 1, -1, -1], y=[-0.5, -0.5, 0, 0, -0.5],
+                      fill='toself', fillcolor='#708090',
+                      line=dict(color='gray'), name=tr('Metall', 'Metal')),
+            go.Scatter(x=[0.5], y=[1.5], mode='markers',
+                      marker=dict(size=10, color=light_color, symbol='diamond'),
+                      name=tr('Photon', 'Photon'))
+        ],
+        frames=frames
+    )
+    
+    fig.update_layout(
+        title=tr("Photoeffekt Animation", "Photoelectric Effect Animation"),
+        xaxis=dict(range=[-1.5, 1.5], visible=False),
+        yaxis=dict(range=[-0.6, 2], visible=False),
+        height=380,
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            y=1.15, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 30, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(tr("💡 Photonen treffen auf Metall → Elektronen werden emittiert.",
+                  "💡 Photons hit metal → electrons are emitted."))
 
 
 def render_franck_hertz_tab():
@@ -812,49 +854,83 @@ def render_franck_hertz_tab():
 
 
 def run_franck_hertz_animation(U: np.ndarray, I: np.ndarray, U_excitation: float, show_theory: bool):
-    """Animation der Franck-Hertz-Messung"""
+    """Animation der Franck-Hertz-Messung mit Plotly Frames"""
     import plotly.graph_objects as go
     
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    
     n_points = len(U)
-    step = max(1, n_points // 100)
+    n_frames = 60
+    step = max(1, n_points // n_frames)
     
-    for i in range(step, n_points + 1, step):
-        fig = go.Figure()
+    # Frames vorberechnen
+    frames = []
+    for frame_idx in range(n_frames):
+        i = min((frame_idx + 1) * step, n_points)
         
-        fig.add_trace(go.Scatter(
+        frame_data = [go.Scatter(
             x=U[:i], y=I[:i],
             mode='lines',
             line=dict(color='blue', width=2),
-            name=tr("Anodenstrom", "Anode current")
-        ))
+            fill='tozeroy', fillcolor='rgba(49, 130, 206, 0.2)'
+        )]
         
-        if show_theory:
-            for n in range(1, int(U[i-1] / U_excitation) + 1):
-                U_peak = n * U_excitation
-                if U_peak <= U[i-1]:
-                    fig.add_vline(x=U_peak, line_dash="dash", line_color="red", opacity=0.5)
-        
-        fig.update_layout(
-            title=tr(f"Franck-Hertz-Messung: U = {U[i-1]:.1f} V", 
-                    f"Franck-Hertz Measurement: U = {U[i-1]:.1f} V"),
-            xaxis_title=tr("U [V]", "U [V]"),
-            yaxis_title=tr("I [a.u.]", "I [a.u.]"),
-            xaxis=dict(range=[0, max(U)]),
-            yaxis=dict(range=[0, max(I) * 1.1]),
-            height=400
-        )
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress(i / n_points)
-        time.sleep(0.02)
+        frames.append(go.Frame(data=frame_data, name=str(frame_idx)))
     
-    st.success(tr("✅ Messung abgeschlossen", "✅ Measurement complete"))
+    # Initiale Figur
+    fig = go.Figure(
+        data=[go.Scatter(
+            x=U[:step], y=I[:step],
+            mode='lines',
+            line=dict(color='blue', width=2),
+            fill='tozeroy', fillcolor='rgba(49, 130, 206, 0.2)',
+            name=tr("Anodenstrom", "Anode current")
+        )],
+        frames=frames
+    )
+    
+    # Theoretische Maxima
+    if show_theory:
+        for n in range(1, int(max(U) / U_excitation) + 1):
+            U_peak = n * U_excitation
+            if U_peak <= max(U):
+                fig.add_vline(x=U_peak, line_dash="dash", line_color="red", opacity=0.5,
+                             annotation_text=f"{n}×{U_excitation:.1f}V")
+    
+    fig.update_layout(
+        title=tr("Franck-Hertz-Messung (animiert)", "Franck-Hertz Measurement (animated)"),
+        xaxis_title=tr("U [V]", "U [V]"),
+        yaxis_title=tr("I [a.u.]", "I [a.u.]"),
+        xaxis=dict(range=[0, max(U)]),
+        yaxis=dict(range=[0, max(I) * 1.1]),
+        height=400,
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 50, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}])
+            ]
+        )],
+        sliders=[dict(
+            active=0,
+            currentvalue=dict(prefix=tr("Spannung: ", "Voltage: "), visible=True),
+            steps=[dict(args=[[str(i)], {"frame": {"duration": 0}, "mode": "immediate"}],
+                       method="animate", label=f"{U[min((i+1)*step, n_points-1)]:.0f}V") 
+                   for i in range(0, n_frames, max(1, n_frames//10))]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(tr("💡 Beobachte die periodischen Stromabfälle bei Vielfachen der Anregungsenergie.",
+                  "💡 Observe the periodic current drops at multiples of excitation energy."))
 
 
 def render_spectra_tab():

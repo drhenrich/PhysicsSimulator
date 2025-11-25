@@ -358,7 +358,7 @@ def render_heat_conduction_tab():
 
 
 def run_heat_1d_animation(alpha: float, T_hot: float, T_cold: float, n_steps: int, speed: int):
-    """1D Wärmeleitung Animation"""
+    """1D Wärmeleitung Animation mit Plotly Frames"""
     import plotly.graph_objects as go
     
     lang = st.session_state.get("language", "de")
@@ -366,57 +366,89 @@ def run_heat_1d_animation(alpha: float, T_hot: float, T_cold: float, n_steps: in
     
     N = 100
     dx = 1.0 / N
-    dt = 0.4 * dx**2 / alpha  # CFL-Bedingung
+    dt = 0.4 * dx**2 / alpha
     
-    # Anfangsbedingung: links heiß, rechts kalt
-    T = np.linspace(T_hot, T_cold, N)
     x = np.linspace(0, 1, N)
     
-    # Animation mit st.empty()
-    chart_placeholder = st.empty()
-    info_placeholder = st.empty()
-    progress_bar = st.progress(0)
+    # Vorberechnung aller Frames
+    T = np.linspace(T_hot, T_cold, N)
+    frames = []
+    T_data = [T.copy()]
     
     for step in range(n_steps):
-        # Randbedingungen (Dirichlet)
         T[0] = T_hot
         T[-1] = T_cold
-        
-        # Update
         T = heat_conduction_1d_step(T, alpha, dx, dt)
-        
-        # Plot mit Plotly
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=x, y=T,
+        T_data.append(T.copy())
+    
+    # Frames erstellen
+    for step, T_step in enumerate(T_data):
+        frames.append(go.Frame(
+            data=[go.Scatter(
+                x=x, y=T_step,
+                mode='lines',
+                fill='tozeroy',
+                line=dict(color='red', width=3),
+                fillcolor='rgba(255, 100, 100, 0.3)'
+            )],
+            name=str(step),
+            layout=go.Layout(title=tr(
+                f"Temperaturverteilung (t = {step * dt:.4f} s)",
+                f"Temperature distribution (t = {step * dt:.4f} s)"
+            ))
+        ))
+    
+    fig = go.Figure(
+        data=[go.Scatter(
+            x=x, y=T_data[0],
             mode='lines',
             fill='tozeroy',
             line=dict(color='red', width=3),
             fillcolor='rgba(255, 100, 100, 0.3)'
-        ))
-        fig.update_layout(
-            title=tr(f"Temperaturverteilung (t = {step * dt:.4f} s)", 
-                    f"Temperature distribution (t = {step * dt:.4f} s)"),
-            xaxis_title=tr("Position x [m]", "Position x [m]"),
-            yaxis_title=tr("Temperatur [°C]", "Temperature [°C]"),
-            yaxis=dict(range=[T_cold - 5, T_hot + 5]),
-            height=400
-        )
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        info_placeholder.info(tr(
-            f"Schritt {step + 1}/{n_steps} | Mittlere Temperatur: {np.mean(T):.1f} °C",
-            f"Step {step + 1}/{n_steps} | Mean temperature: {np.mean(T):.1f} °C"
-        ))
-        progress_bar.progress((step + 1) / n_steps)
-        
-        time.sleep(0.1 / speed)
+        )],
+        frames=frames
+    )
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation completed"))
+    frame_duration = max(20, 150 - speed * 10)
+    
+    fig.update_layout(
+        title=tr("1D Wärmeleitung", "1D Heat Conduction"),
+        xaxis_title=tr("Position x [m]", "Position x [m]"),
+        yaxis_title=tr("Temperatur [°C]", "Temperature [°C]"),
+        yaxis=dict(range=[T_cold - 5, T_hot + 5]),
+        height=400,
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            y=1.15, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": frame_duration, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}])
+            ]
+        )],
+        sliders=[dict(
+            active=0,
+            yanchor="top", xanchor="left",
+            currentvalue=dict(prefix=tr("Schritt: ", "Step: "), visible=True),
+            steps=[dict(args=[[str(i)], {"frame": {"duration": 0}, "mode": "immediate"}],
+                       method="animate", label=str(i)) for i in range(0, len(frames), max(1, len(frames)//20))]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(tr("Anfangstemperatur links", "Initial temp left"), f"{T_hot} °C")
+    with col2:
+        st.metric(tr("Endtemperatur rechts", "Final temp right"), f"{T_cold} °C")
 
 
 def run_heat_2d_animation(alpha: float, T_hot: float, T_cold: float, n_steps: int, speed: int):
-    """2D Wärmeleitung Animation"""
+    """2D Wärmeleitung Animation mit Plotly Frames"""
     import plotly.graph_objects as go
     
     lang = st.session_state.get("language", "de")
@@ -424,55 +456,71 @@ def run_heat_2d_animation(alpha: float, T_hot: float, T_cold: float, n_steps: in
     
     N = 50
     dx = 1.0 / N
-    dt = 0.2 * dx**2 / alpha  # CFL-Bedingung (strenger für 2D)
+    dt = 0.2 * dx**2 / alpha
     
-    # Anfangsbedingung: heißer Punkt in der Mitte
+    # Anfangsbedingung
     T = np.full((N, N), T_cold, dtype=float)
     center = N // 2
     T[center-3:center+3, center-3:center+3] = T_hot
     
-    # Animation
-    chart_placeholder = st.empty()
-    info_placeholder = st.empty()
-    progress_bar = st.progress(0)
+    # Vorberechnung
+    frames = []
+    T_snapshots = [T.copy()]
     
     for step in range(n_steps):
-        # Randbedingungen (kalt an allen Rändern)
         T[0, :] = T_cold
         T[-1, :] = T_cold
         T[:, 0] = T_cold
         T[:, -1] = T_cold
-        
-        # Update
         T = heat_conduction_2d_step(T, alpha, dx, dt)
-        
-        # Plot
-        fig = go.Figure(data=go.Heatmap(
-            z=T,
-            colorscale='RdYlBu_r',
-            zmin=T_cold,
-            zmax=T_hot,
-            colorbar=dict(title=tr("T [°C]", "T [°C]"))
-        ))
-        fig.update_layout(
-            title=tr(f"2D Wärmeleitung (t = {step * dt:.4f} s)",
-                    f"2D Heat conduction (t = {step * dt:.4f} s)"),
-            xaxis_title="x",
-            yaxis_title="y",
-            height=450,
-            yaxis=dict(scaleanchor="x", scaleratio=1)
-        )
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        info_placeholder.info(tr(
-            f"Schritt {step + 1}/{n_steps} | Max: {T.max():.1f} °C | Min: {T.min():.1f} °C",
-            f"Step {step + 1}/{n_steps} | Max: {T.max():.1f} °C | Min: {T.min():.1f} °C"
-        ))
-        progress_bar.progress((step + 1) / n_steps)
-        
-        time.sleep(0.1 / speed)
+        T_snapshots.append(T.copy())
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation completed"))
+    # Frames
+    for step, T_step in enumerate(T_snapshots):
+        frames.append(go.Frame(
+            data=[go.Heatmap(
+                z=T_step,
+                colorscale='RdYlBu_r',
+                zmin=T_cold, zmax=T_hot,
+                showscale=True
+            )],
+            name=str(step)
+        ))
+    
+    fig = go.Figure(
+        data=[go.Heatmap(
+            z=T_snapshots[0],
+            colorscale='RdYlBu_r',
+            zmin=T_cold, zmax=T_hot,
+            colorbar=dict(title=tr("T [°C]", "T [°C]"))
+        )],
+        frames=frames
+    )
+    
+    frame_duration = max(30, 200 - speed * 15)
+    
+    fig.update_layout(
+        title=tr("2D Wärmeleitung (heißer Punkt)", "2D Heat Conduction (hot spot)"),
+        xaxis_title="x", yaxis_title="y",
+        height=450,
+        yaxis=dict(scaleanchor="x", scaleratio=1),
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": frame_duration, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(tr("💡 Beobachte wie die Wärme vom heißen Zentrum nach außen diffundiert.",
+                  "💡 Watch how heat diffuses from the hot center outward."))
 
 
 def render_state_changes_tab():
@@ -711,7 +759,7 @@ def render_kinetic_tab():
 
 
 def run_kinetic_animation(n_particles: int, n_frames: int, temperature: float, speed: int):
-    """Animierte Gaskinetik-Simulation"""
+    """Animierte Gaskinetik-Simulation mit Plotly Frames"""
     import plotly.graph_objects as go
     
     lang = st.session_state.get("language", "de")
@@ -723,94 +771,114 @@ def run_kinetic_animation(n_particles: int, n_frames: int, temperature: float, s
     # Initialisiere Teilchen
     particles = init_particles(n_particles, box_size, temperature)
     
-    # Placeholders
-    chart_placeholder = st.empty()
-    metrics_placeholder = st.empty()
-    progress_bar = st.progress(0)
+    # Vorberechnung aller Frames
+    st.info(tr("⏳ Berechne Simulation...", "⏳ Computing simulation..."))
     
+    all_positions = []
+    all_speeds = []
     pressures = []
-    temperatures = []
     
     for frame in range(n_frames):
-        # Update
         particles = update_particles(particles, dt, box_size)
         
-        # Messungen
-        p = compute_pressure(particles, box_size)
-        pressures.append(p)
-        
-        # Positionen extrahieren
         x = [p.x for p in particles]
         y = [p.y for p in particles]
+        spd = [np.sqrt(p.vx**2 + p.vy**2) for p in particles]
         
-        # Farbe nach Geschwindigkeit
-        speeds = [np.sqrt(p.vx**2 + p.vy**2) for p in particles]
-        
-        # Plot
-        fig = go.Figure()
-        
-        # Teilchen
-        fig.add_trace(go.Scatter(
-            x=x, y=y,
+        all_positions.append((x, y))
+        all_speeds.append(spd)
+        pressures.append(compute_pressure(particles, box_size))
+    
+    # Plotly Frames erstellen
+    frames = []
+    for i, ((x, y), spd) in enumerate(zip(all_positions, all_speeds)):
+        frames.append(go.Frame(
+            data=[go.Scatter(
+                x=x, y=y,
+                mode='markers',
+                marker=dict(
+                    size=12,
+                    color=spd,
+                    colorscale='Plasma',
+                    cmin=0, cmax=max(max(s) for s in all_speeds),
+                    line=dict(width=1, color='black')
+                )
+            )],
+            name=str(i)
+        ))
+    
+    # Initiale Figur
+    fig = go.Figure(
+        data=[go.Scatter(
+            x=all_positions[0][0], y=all_positions[0][1],
             mode='markers',
             marker=dict(
                 size=12,
-                color=speeds,
+                color=all_speeds[0],
                 colorscale='Plasma',
                 colorbar=dict(title=tr("v [a.u.]", "v [a.u.]")),
                 line=dict(width=1, color='black')
-            ),
-            name=tr("Teilchen", "Particles")
-        ))
-        
-        # Box
-        fig.add_shape(type="rect", x0=0, y0=0, x1=box_size, y1=box_size,
-                     line=dict(color="black", width=3))
-        
-        fig.update_layout(
-            title=tr(f"Gaskinetik (Frame {frame + 1}/{n_frames})",
-                    f"Gas Kinetics (Frame {frame + 1}/{n_frames})"),
-            xaxis=dict(range=[-0.05, box_size + 0.05], title="x"),
-            yaxis=dict(range=[-0.05, box_size + 0.05], title="y", scaleanchor="x"),
-            height=450,
-            showlegend=False
-        )
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        
-        # Metriken
-        col1, col2, col3 = metrics_placeholder.columns(3)
-        with col1:
-            st.metric(tr("Mittlere Geschw.", "Mean velocity"), f"{np.mean(speeds):.3f}")
-        with col2:
-            st.metric(tr("Druck (rel.)", "Pressure (rel.)"), f"{p:.4f}")
-        with col3:
-            st.metric(tr("E_kin (rel.)", "E_kin (rel.)"), 
-                     f"{sum(0.5*(p.vx**2 + p.vy**2) for p in particles):.3f}")
-        
-        progress_bar.progress((frame + 1) / n_frames)
-        time.sleep(0.05 / speed)
+            )
+        )],
+        frames=frames
+    )
     
-    # Finale Auswertung
-    st.success(tr("✅ Simulation abgeschlossen", "✅ Simulation completed"))
+    # Box
+    fig.add_shape(type="rect", x0=0, y0=0, x1=box_size, y1=box_size,
+                 line=dict(color="black", width=3))
+    
+    frame_duration = max(10, 80 - speed * 6)
+    
+    fig.update_layout(
+        title=tr("Kinetische Gastheorie", "Kinetic Gas Theory"),
+        xaxis=dict(range=[-0.05, box_size + 0.05], title="x"),
+        yaxis=dict(range=[-0.05, box_size + 0.05], title="y", scaleanchor="x"),
+        height=450,
+        showlegend=False,
+        updatemenus=[dict(
+            type="buttons",
+            showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": frame_duration, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}])
+            ]
+        )],
+        sliders=[dict(
+            active=0,
+            yanchor="top", xanchor="left",
+            currentvalue=dict(prefix=tr("Frame: ", "Frame: "), visible=True),
+            steps=[dict(args=[[str(i)], {"frame": {"duration": 0}, "mode": "immediate"}],
+                       method="animate", label=str(i)) for i in range(0, n_frames, max(1, n_frames//15))]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
     
     # Druckverlauf
     fig_p = go.Figure()
     fig_p.add_trace(go.Scatter(
         y=pressures,
         mode='lines',
-        line=dict(color='green'),
+        line=dict(color='green', width=2),
+        fill='tozeroy', fillcolor='rgba(56, 161, 105, 0.2)',
         name=tr("Druck", "Pressure")
     ))
     fig_p.update_layout(
-        title=tr("Druckverlauf über Zeit", "Pressure over time"),
+        title=tr("Druckverlauf", "Pressure over time"),
         xaxis_title=tr("Frame", "Frame"),
         yaxis_title=tr("Druck [a.u.]", "Pressure [a.u.]"),
-        height=300
+        height=250
     )
     st.plotly_chart(fig_p, use_container_width=True)
     
-    st.metric(
-        tr("Mittlerer Druck", "Mean pressure"),
-        f"{np.mean(pressures):.4f} ± {np.std(pressures):.4f}"
-    )
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(tr("Mittlerer Druck", "Mean pressure"), f"{np.mean(pressures):.4f}")
+    with col2:
+        st.metric(tr("Std. Abweichung", "Std. deviation"), f"{np.std(pressures):.4f}")

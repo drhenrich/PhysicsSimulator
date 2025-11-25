@@ -670,66 +670,119 @@ def render_inclined_plane_ui():
 
 
 def run_projectile_animation(t: np.ndarray, x: np.ndarray, y: np.ndarray, v0: float, angle: float):
-    """Animation des Wurfs"""
+    """Animation des Wurfs mit Plotly Frames"""
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    n_frames = min(100, len(t))
+    n_frames = min(80, len(t))
     step = max(1, len(t) // n_frames)
     
-    for i in range(0, len(t), step):
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x[:i+1], y=y[:i+1], mode='lines', line=dict(color='lightblue', width=2), showlegend=False))
-        fig.add_trace(go.Scatter(x=[x[i]], y=[y[i]], mode='markers', marker=dict(size=15, color='blue'), name=tr("Objekt", "Object")))
+    # Frames vorberechnen
+    frames = []
+    for frame_idx in range(n_frames):
+        i = min(frame_idx * step, len(t) - 1)
         
         vx = v0 * np.cos(np.radians(angle))
         vy = v0 * np.sin(np.radians(angle)) - g_earth * t[i]
-        scale = 0.5
-        fig.add_annotation(x=x[i], y=y[i], ax=x[i] + vx*scale, ay=y[i] + vy*scale,
-                          xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowcolor="red")
         
-        fig.update_layout(title=tr(f"Schiefer Wurf (t = {t[i]:.2f} s)", f"Projectile Motion (t = {t[i]:.2f} s)"),
-                         xaxis=dict(range=[-1, max(x)*1.1], title="x [m]"),
-                         yaxis=dict(range=[-0.5, max(y)*1.2], title="y [m]"), height=400)
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((i + 1) / len(t))
-        time.sleep(0.03)
+        frame_data = [
+            go.Scatter(x=x[:i+1], y=y[:i+1], mode='lines', 
+                      line=dict(color='lightblue', width=2), showlegend=False),
+            go.Scatter(x=[x[i]], y=[y[i]], mode='markers', 
+                      marker=dict(size=15, color='blue'), showlegend=False)
+        ]
+        frames.append(go.Frame(data=frame_data, name=str(frame_idx)))
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation complete"))
+    fig = go.Figure(
+        data=[
+            go.Scatter(x=[x[0]], y=[y[0]], mode='markers',
+                      marker=dict(size=15, color='blue'), name=tr("Objekt", "Object"))
+        ],
+        frames=frames
+    )
+    
+    fig.update_layout(
+        title=tr("Schiefer Wurf", "Projectile Motion"),
+        xaxis=dict(range=[-1, max(x)*1.1], title="x [m]"),
+        yaxis=dict(range=[-0.5, max(y)*1.2], title="y [m]"),
+        height=400,
+        updatemenus=[dict(
+            type="buttons", showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 40, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def run_pendulum_animation(t: np.ndarray, theta: np.ndarray, L: float):
-    """Animation des Pendels"""
+    """Animation des Pendels mit Plotly Frames"""
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    n_frames = min(200, len(t))
+    n_frames = min(120, len(t))
     step = max(1, len(t) // n_frames)
     
-    for i in range(0, len(t), step):
+    # Frames vorberechnen
+    frames = []
+    for frame_idx in range(n_frames):
+        i = min(frame_idx * step, len(t) - 1)
         x_bob = L * np.sin(theta[i])
         y_bob = -L * np.cos(theta[i])
         
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(size=10, color='black'), showlegend=False))
-        fig.add_trace(go.Scatter(x=[0, x_bob], y=[0, y_bob], mode='lines', line=dict(color='gray', width=3), showlegend=False))
-        fig.add_trace(go.Scatter(x=[x_bob], y=[y_bob], mode='markers', marker=dict(size=25, color='blue'), showlegend=False))
-        
-        fig.update_layout(title=tr(f"Pendel (t = {t[i]:.2f} s, θ = {np.degrees(theta[i]):.1f}°)",
-                                  f"Pendulum (t = {t[i]:.2f} s, θ = {np.degrees(theta[i]):.1f}°)"),
-                         xaxis=dict(range=[-L*1.3, L*1.3], visible=False),
-                         yaxis=dict(range=[-L*1.3, L*0.3], visible=False, scaleanchor="x"), height=400)
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((i + 1) / len(t))
-        time.sleep(0.02)
+        frame_data = [
+            go.Scatter(x=[0], y=[0], mode='markers', 
+                      marker=dict(size=10, color='black'), showlegend=False),
+            go.Scatter(x=[0, x_bob], y=[0, y_bob], mode='lines', 
+                      line=dict(color='gray', width=3), showlegend=False),
+            go.Scatter(x=[x_bob], y=[y_bob], mode='markers', 
+                      marker=dict(size=25, color='blue'), showlegend=False)
+        ]
+        frames.append(go.Frame(data=frame_data, name=str(frame_idx)))
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation complete"))
+    # Initial
+    x0 = L * np.sin(theta[0])
+    y0 = -L * np.cos(theta[0])
+    
+    fig = go.Figure(
+        data=[
+            go.Scatter(x=[0], y=[0], mode='markers', marker=dict(size=10, color='black'), showlegend=False),
+            go.Scatter(x=[0, x0], y=[0, y0], mode='lines', line=dict(color='gray', width=3), showlegend=False),
+            go.Scatter(x=[x0], y=[y0], mode='markers', marker=dict(size=25, color='blue'), name=tr("Pendel", "Pendulum"))
+        ],
+        frames=frames
+    )
+    
+    fig.update_layout(
+        title=tr("Pendelbewegung", "Pendulum Motion"),
+        xaxis=dict(range=[-L*1.3, L*1.3], visible=False),
+        yaxis=dict(range=[-L*1.3, L*0.3], visible=False, scaleanchor="x"),
+        height=400,
+        updatemenus=[dict(
+            type="buttons", showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 30, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_3d_nbody_tab():
@@ -1027,16 +1080,17 @@ def render_newtons_cradle_ui():
 
 
 def run_1d_collision_animation(m1, v1, m2, v2, v1_new, v2_new):
-    """Animation eines 1D-Stoßes"""
+    """Animation eines 1D-Stoßes mit Plotly Frames"""
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    n_frames, collision_frame = 120, 50
+    n_frames, collision_frame = 100, 40
     r1, r2 = 0.2 * np.sqrt(m1), 0.2 * np.sqrt(m2)
     x1_start, x2_start = -2.0, 2.0
+    theta = np.linspace(0, 2*np.pi, 50)
     
+    # Frames vorberechnen
+    frames = []
     for frame in range(n_frames):
         t = frame / 30.0
         if frame < collision_frame:
@@ -1047,70 +1101,131 @@ def run_1d_collision_animation(m1, v1, m2, v2, v1_new, v2_new):
             x1, x2 = 0 + v1_new * t_after, 0 + v2_new * t_after
             c1, c2 = 'lightblue', 'salmon'
         
-        fig = go.Figure()
-        theta = np.linspace(0, 2*np.pi, 50)
-        fig.add_trace(go.Scatter(x=x1 + r1 * np.cos(theta), y=r1 * np.sin(theta), fill='toself', fillcolor=c1, line=dict(color='darkblue'), name=f"m₁={m1}"))
-        fig.add_trace(go.Scatter(x=x2 + r2 * np.cos(theta), y=r2 * np.sin(theta), fill='toself', fillcolor=c2, line=dict(color='darkred'), name=f"m₂={m2}"))
-        
-        phase = tr("VOR Stoß", "BEFORE collision") if frame < collision_frame else tr("NACH Stoß", "AFTER collision")
-        fig.update_layout(title=tr(f"1D-Stoß — {phase}", f"1D Collision — {phase}"),
-                         xaxis=dict(range=[-5, 5], title="x [m]"), yaxis=dict(range=[-1, 1], visible=False, scaleanchor="x"), height=250)
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((frame + 1) / n_frames)
-        time.sleep(0.03)
+        frame_data = [
+            go.Scatter(x=x1 + r1 * np.cos(theta), y=r1 * np.sin(theta), 
+                      fill='toself', fillcolor=c1, line=dict(color='darkblue'), showlegend=False),
+            go.Scatter(x=x2 + r2 * np.cos(theta), y=r2 * np.sin(theta), 
+                      fill='toself', fillcolor=c2, line=dict(color='darkred'), showlegend=False)
+        ]
+        frames.append(go.Frame(data=frame_data, name=str(frame)))
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation complete"))
+    fig = go.Figure(
+        data=[
+            go.Scatter(x=x1_start + r1 * np.cos(theta), y=r1 * np.sin(theta),
+                      fill='toself', fillcolor='blue', line=dict(color='darkblue'), name=f"m₁={m1}"),
+            go.Scatter(x=x2_start + r2 * np.cos(theta), y=r2 * np.sin(theta),
+                      fill='toself', fillcolor='red', line=dict(color='darkred'), name=f"m₂={m2}")
+        ],
+        frames=frames
+    )
+    
+    fig.update_layout(
+        title=tr("1D-Stoß Animation", "1D Collision Animation"),
+        xaxis=dict(range=[-5, 5], title="x [m]"),
+        yaxis=dict(range=[-1, 1], visible=False, scaleanchor="x"),
+        height=280,
+        updatemenus=[dict(
+            type="buttons", showactive=False,
+            y=1.2, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 30, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def run_2d_collision_animation(v1x, v1y, v2x, v2y, impact_param, restitution):
-    """Animation eines 2D-Stoßes"""
+    """Animation eines 2D-Stoßes mit Plotly Frames"""
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
     b1 = Body2D("Ball 1", -2.0, impact_param, v1x, v1y, 1.0, 0.15, "red")
     b2 = Body2D("Ball 2", 2.0, 0.0, v2x, v2y, 1.0, 0.15, "blue")
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    n_frames, dt, collision_occurred = 150, 0.02, False
+    n_frames, dt, collision_occurred = 120, 0.02, False
+    theta = np.linspace(0, 2*np.pi, 30)
+    
+    # Simulation vorberechnen
+    positions = []
+    trails1_x, trails1_y = [], []
+    trails2_x, trails2_y = [], []
     
     for frame in range(n_frames):
         b1.x += b1.vx * dt
         b1.y += b1.vy * dt
         b2.x += b2.vx * dt
         b2.y += b2.vy * dt
-        b1.update_trail()
-        b2.update_trail()
+        
+        trails1_x.append(b1.x)
+        trails1_y.append(b1.y)
+        trails2_x.append(b2.x)
+        trails2_y.append(b2.y)
         
         dist = np.sqrt((b2.x - b1.x)**2 + (b2.y - b1.y)**2)
         if dist < b1.radius + b2.radius and not collision_occurred:
             b1, b2 = collision_2d(b1, b2, restitution)
             collision_occurred = True
         
-        fig = go.Figure()
-        if len(b1.trail_x) > 1:
-            fig.add_trace(go.Scatter(x=b1.trail_x, y=b1.trail_y, mode='lines', line=dict(color='lightcoral', width=1), showlegend=False))
-        if len(b2.trail_x) > 1:
-            fig.add_trace(go.Scatter(x=b2.trail_x, y=b2.trail_y, mode='lines', line=dict(color='lightblue', width=1), showlegend=False))
-        
-        theta = np.linspace(0, 2*np.pi, 30)
-        for b, color in [(b1, 'red'), (b2, 'blue')]:
-            fig.add_trace(go.Scatter(x=b.x + b.radius * np.cos(theta), y=b.y + b.radius * np.sin(theta),
-                                    fill='toself', fillcolor=color, line=dict(color='black', width=1), name=b.name))
-        
-        fig.update_layout(title=tr(f"2D-Stoß (e={restitution})", f"2D Collision (e={restitution})"),
-                         xaxis=dict(range=[-4, 4], title="x", scaleanchor="y"), yaxis=dict(range=[-2, 2], title="y"), height=400, showlegend=False)
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((frame + 1) / n_frames)
-        time.sleep(0.02)
+        positions.append((b1.x, b1.y, b2.x, b2.y, list(trails1_x), list(trails1_y), list(trails2_x), list(trails2_y)))
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation complete"))
+    # Frames erstellen
+    frames = []
+    for i, (x1, y1, x2, y2, t1x, t1y, t2x, t2y) in enumerate(positions):
+        frame_data = []
+        if len(t1x) > 1:
+            frame_data.append(go.Scatter(x=t1x, y=t1y, mode='lines', line=dict(color='lightcoral', width=1), showlegend=False))
+        if len(t2x) > 1:
+            frame_data.append(go.Scatter(x=t2x, y=t2y, mode='lines', line=dict(color='lightblue', width=1), showlegend=False))
+        
+        frame_data.append(go.Scatter(x=x1 + 0.15 * np.cos(theta), y=y1 + 0.15 * np.sin(theta),
+                                    fill='toself', fillcolor='red', line=dict(color='black'), showlegend=False))
+        frame_data.append(go.Scatter(x=x2 + 0.15 * np.cos(theta), y=y2 + 0.15 * np.sin(theta),
+                                    fill='toself', fillcolor='blue', line=dict(color='black'), showlegend=False))
+        frames.append(go.Frame(data=frame_data, name=str(i)))
+    
+    fig = go.Figure(
+        data=[
+            go.Scatter(x=[-2.0 + 0.15 * np.cos(t) for t in theta], y=[impact_param + 0.15 * np.sin(t) for t in theta],
+                      fill='toself', fillcolor='red', line=dict(color='black'), name="Ball 1"),
+            go.Scatter(x=[2.0 + 0.15 * np.cos(t) for t in theta], y=[0.15 * np.sin(t) for t in theta],
+                      fill='toself', fillcolor='blue', line=dict(color='black'), name="Ball 2")
+        ],
+        frames=frames
+    )
+    
+    fig.update_layout(
+        title=tr(f"2D-Stoß (e={restitution})", f"2D Collision (e={restitution})"),
+        xaxis=dict(range=[-4, 4], title="x", scaleanchor="y"),
+        yaxis=dict(range=[-2, 2], title="y"),
+        height=400, showlegend=False,
+        updatemenus=[dict(
+            type="buttons", showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 25, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def run_billiard_simulation(n_balls: int):
-    """Billard-Simulation"""
+    """Billard-Simulation mit Plotly Frames"""
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
@@ -1125,9 +1240,10 @@ def run_billiard_simulation(n_balls: int):
         vy = np.random.uniform(-1.5, 1.5)
         balls.append(Body2D(f"Ball {i+1}", x, y, vx, vy, 1.0, 0.12, colors[i % len(colors)]))
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    n_frames, dt = 300, 0.02
+    st.info(tr("⏳ Berechne Simulation...", "⏳ Computing simulation..."))
+    
+    n_frames, dt = 200, 0.02
+    all_positions = []
     
     for frame in range(n_frames):
         for b in balls:
@@ -1156,69 +1272,153 @@ def run_billiard_simulation(n_balls: int):
                 if dist < balls[i].radius + balls[j].radius:
                     collision_2d(balls[i], balls[j], 0.95)
         
-        fig = go.Figure()
-        fig.add_shape(type="rect", x0=-table_w/2, y0=-table_h/2, x1=table_w/2, y1=table_h/2, fillcolor="darkgreen", line=dict(color="brown", width=4))
-        
-        theta = np.linspace(0, 2*np.pi, 20)
-        for b in balls:
-            fig.add_trace(go.Scatter(x=b.x + b.radius * np.cos(theta), y=b.y + b.radius * np.sin(theta),
-                                    fill='toself', fillcolor=b.color, line=dict(color='black', width=1), showlegend=False))
-        
-        fig.update_layout(title=tr(f"Billard ({n_balls} Kugeln)", f"Billiard ({n_balls} balls)"),
-                         xaxis=dict(range=[-table_w/2 - 0.2, table_w/2 + 0.2], visible=False, scaleanchor="y"),
-                         yaxis=dict(range=[-table_h/2 - 0.2, table_h/2 + 0.2], visible=False), height=350, margin=dict(l=20, r=20, t=40, b=20))
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((frame + 1) / n_frames)
-        time.sleep(0.02)
+        all_positions.append([(b.x, b.y, b.color) for b in balls])
     
-    st.success(tr("✅ Simulation abgeschlossen", "✅ Simulation complete"))
+    # Frames erstellen
+    theta = np.linspace(0, 2*np.pi, 20)
+    frames = []
+    for i, positions in enumerate(all_positions):
+        frame_data = [go.Scatter(
+            x=[-table_w/2, table_w/2, table_w/2, -table_w/2, -table_w/2],
+            y=[-table_h/2, -table_h/2, table_h/2, table_h/2, -table_h/2],
+            fill='toself', fillcolor='darkgreen', line=dict(color='brown', width=4),
+            showlegend=False, hoverinfo='skip'
+        )]
+        for x, y, color in positions:
+            frame_data.append(go.Scatter(
+                x=x + 0.12 * np.cos(theta), y=y + 0.12 * np.sin(theta),
+                fill='toself', fillcolor=color, line=dict(color='black', width=1), showlegend=False
+            ))
+        frames.append(go.Frame(data=frame_data, name=str(i)))
+    
+    # Initial
+    init_data = [go.Scatter(
+        x=[-table_w/2, table_w/2, table_w/2, -table_w/2, -table_w/2],
+        y=[-table_h/2, -table_h/2, table_h/2, table_h/2, -table_h/2],
+        fill='toself', fillcolor='darkgreen', line=dict(color='brown', width=4),
+        showlegend=False
+    )]
+    for x, y, color in all_positions[0]:
+        init_data.append(go.Scatter(
+            x=x + 0.12 * np.cos(theta), y=y + 0.12 * np.sin(theta),
+            fill='toself', fillcolor=color, line=dict(color='black', width=1), showlegend=False
+        ))
+    
+    fig = go.Figure(data=init_data, frames=frames)
+    
+    fig.update_layout(
+        title=tr(f"Billard ({n_balls} Kugeln)", f"Billiard ({n_balls} balls)"),
+        xaxis=dict(range=[-table_w/2 - 0.2, table_w/2 + 0.2], visible=False, scaleanchor="y"),
+        yaxis=dict(range=[-table_h/2 - 0.2, table_h/2 + 0.2], visible=False),
+        height=380, margin=dict(l=20, r=20, t=50, b=20),
+        updatemenus=[dict(
+            type="buttons", showactive=False,
+            y=1.15, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 20, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def run_newtons_cradle(n_balls: int, n_start: int):
-    """Newton-Wiege Animation"""
+    """Newton-Wiege Animation mit Plotly Frames"""
     lang = st.session_state.get("language", "de")
     tr = lambda de, en: de if lang == "de" else en
     
     L, r, spacing = 1.5, 0.1, 0.22
-    theta = np.zeros(n_balls)
+    theta_angles = np.zeros(n_balls)
     omega = np.zeros(n_balls)
-    theta[:n_start] = 0.5
+    theta_angles[:n_start] = 0.5
     
-    chart_placeholder = st.empty()
-    progress = st.progress(0)
-    n_frames, dt, g = 400, 0.01, 9.81
+    n_frames, dt, g = 300, 0.01, 9.81
     
+    # Simulation vorberechnen
+    all_positions = []
     for frame in range(n_frames):
         for i in range(n_balls):
-            alpha = -(g / L) * np.sin(theta[i])
+            alpha = -(g / L) * np.sin(theta_angles[i])
             omega[i] += alpha * dt
-            theta[i] += omega[i] * dt
+            theta_angles[i] += omega[i] * dt
         
         for i in range(n_balls - 1):
-            x_i = i * spacing + L * np.sin(theta[i])
-            x_j = (i + 1) * spacing + L * np.sin(theta[i + 1])
+            x_i = i * spacing + L * np.sin(theta_angles[i])
+            x_j = (i + 1) * spacing + L * np.sin(theta_angles[i + 1])
             if x_j - x_i < 2 * r:
                 omega[i], omega[i + 1] = omega[i + 1], omega[i]
         
-        fig = go.Figure()
-        fig.add_shape(type="line", x0=-spacing, y0=0, x1=(n_balls) * spacing, y1=0, line=dict(color="brown", width=4))
-        
-        theta_circle = np.linspace(0, 2*np.pi, 30)
-        for i in range(n_balls):
-            x_pivot = i * spacing
-            x_ball = x_pivot + L * np.sin(theta[i])
-            y_ball = -L * np.cos(theta[i])
-            fig.add_trace(go.Scatter(x=[x_pivot, x_ball], y=[0, y_ball], mode='lines', line=dict(color='gray', width=2), showlegend=False))
-            fig.add_trace(go.Scatter(x=x_ball + r * np.cos(theta_circle), y=y_ball + r * np.sin(theta_circle),
-                                    fill='toself', fillcolor='silver', line=dict(color='gray', width=1), showlegend=False))
-        
-        fig.update_layout(title=tr(f"Newton-Wiege ({n_balls} Kugeln)", f"Newton's Cradle ({n_balls} balls)"),
-                         xaxis=dict(range=[-0.5, (n_balls - 1) * spacing + 0.5], visible=False, scaleanchor="y"),
-                         yaxis=dict(range=[-L - 0.3, 0.2], visible=False), height=400)
-        
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
-        progress.progress((frame + 1) / n_frames)
-        time.sleep(0.015)
+        all_positions.append(theta_angles.copy())
     
-    st.success(tr("✅ Animation abgeschlossen", "✅ Animation complete"))
+    # Frames erstellen
+    theta_circle = np.linspace(0, 2*np.pi, 30)
+    frames = []
+    
+    for i, thetas in enumerate(all_positions):
+        frame_data = [go.Scatter(
+            x=[-spacing, (n_balls) * spacing], y=[0, 0],
+            mode='lines', line=dict(color='brown', width=4), showlegend=False
+        )]
+        
+        for j in range(n_balls):
+            x_pivot = j * spacing
+            x_ball = x_pivot + L * np.sin(thetas[j])
+            y_ball = -L * np.cos(thetas[j])
+            
+            frame_data.append(go.Scatter(
+                x=[x_pivot, x_ball], y=[0, y_ball],
+                mode='lines', line=dict(color='gray', width=2), showlegend=False
+            ))
+            frame_data.append(go.Scatter(
+                x=x_ball + r * np.cos(theta_circle), y=y_ball + r * np.sin(theta_circle),
+                fill='toself', fillcolor='silver', line=dict(color='gray', width=1), showlegend=False
+            ))
+        
+        frames.append(go.Frame(data=frame_data, name=str(i)))
+    
+    # Initial
+    init_thetas = np.zeros(n_balls)
+    init_thetas[:n_start] = 0.5
+    
+    init_data = [go.Scatter(
+        x=[-spacing, (n_balls) * spacing], y=[0, 0],
+        mode='lines', line=dict(color='brown', width=4), showlegend=False
+    )]
+    for j in range(n_balls):
+        x_pivot = j * spacing
+        x_ball = x_pivot + L * np.sin(init_thetas[j])
+        y_ball = -L * np.cos(init_thetas[j])
+        init_data.append(go.Scatter(x=[x_pivot, x_ball], y=[0, y_ball], mode='lines', line=dict(color='gray', width=2), showlegend=False))
+        init_data.append(go.Scatter(x=x_ball + r * np.cos(theta_circle), y=y_ball + r * np.sin(theta_circle),
+                                   fill='toself', fillcolor='silver', line=dict(color='gray'), showlegend=False))
+    
+    fig = go.Figure(data=init_data, frames=frames)
+    
+    fig.update_layout(
+        title=tr(f"Newton-Wiege ({n_balls} Kugeln)", f"Newton's Cradle ({n_balls} balls)"),
+        xaxis=dict(range=[-0.5, (n_balls - 1) * spacing + 0.5], visible=False, scaleanchor="y"),
+        yaxis=dict(range=[-L - 0.3, 0.2], visible=False),
+        height=420,
+        updatemenus=[dict(
+            type="buttons", showactive=False,
+            y=1.12, x=0.5, xanchor="center",
+            buttons=[
+                dict(label="▶️ Play", method="animate",
+                     args=[None, {"frame": {"duration": 15, "redraw": True},
+                                  "fromcurrent": True, "transition": {"duration": 0}}]),
+                dict(label="⏸️ Pause", method="animate",
+                     args=[[None], {"frame": {"duration": 0}, "mode": "immediate"}]),
+                dict(label="🔄 Reset", method="animate",
+                     args=[["0"], {"frame": {"duration": 0}, "mode": "immediate"}])
+            ]
+        )]
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)

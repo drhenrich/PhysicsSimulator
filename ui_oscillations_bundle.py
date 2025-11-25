@@ -617,22 +617,6 @@ def render_oscillations_tab():
                     key="sw_v"
                 )
                 
-                # Animation
-                animate = st.checkbox(
-                    tr("Animation", "Animation"),
-                    value=True,
-                    key="sw_animate"
-                )
-                
-                if animate:
-                    t_anim = st.slider(
-                        tr("Zeit t", "Time t"),
-                        0.0, 1.0, 0.0, 0.01,
-                        key="sw_t"
-                    )
-                else:
-                    t_anim = 0.0
-                
                 st.markdown("---")
                 
                 # Berechne Kennwerte
@@ -643,43 +627,63 @@ def render_oscillations_tab():
                 
                 st.metric(f"λ_{n_mode}", f"{lambda_n:.3f} m")
                 st.metric(f"f_{n_mode}", f"{f_n:.2f} Hz")
+                
+                anim_speed = st.slider(
+                    tr("Animationsgeschw.", "Animation speed"),
+                    50, 200, 100, 10,
+                    key="sw_speed"
+                )
             
             with col_plot:
-                x = np.linspace(0, L, 500)
+                x = np.linspace(0, L, 200)
                 
-                # Stehende Welle
+                # Stehende Welle mit Animation
                 omega = 2 * np.pi * f_n
                 k = n_mode * np.pi / L
                 
-                # Zeitlicher Verlauf
+                # Frames für Animation erstellen
+                n_frames = 60
                 t_period = 1 / f_n
-                t = t_anim * t_period
                 
-                y = 2 * A_wave * np.sin(k * x) * np.cos(omega * t)
+                frames = []
+                for i in range(n_frames):
+                    t = i * t_period / n_frames
+                    y = 2 * A_wave * np.sin(k * x) * np.cos(omega * t)
+                    frames.append(go.Frame(
+                        data=[go.Scatter(x=x, y=y, mode='lines', 
+                                        line=dict(color='#3182ce', width=3),
+                                        fill='tozeroy', fillcolor='rgba(49, 130, 206, 0.2)')],
+                        name=str(i)
+                    ))
+                
+                # Einhüllende
+                y_envelope = 2 * A_wave * np.abs(np.sin(k * x))
                 
                 # Knoten und Bäuche
                 nodes_x = [i * L / n_mode for i in range(n_mode + 1)]
                 antinodes_x = [(i + 0.5) * L / n_mode for i in range(n_mode)]
                 
-                fig = go.Figure()
+                # Initiales Frame
+                y_init = 2 * A_wave * np.sin(k * x)
                 
-                # Welle
-                fig.add_trace(go.Scatter(
-                    x=x, y=y, mode='lines', name=tr('Welle', 'Wave'),
-                    line=dict(color='#3182ce', width=3),
-                    fill='tozeroy', fillcolor='rgba(49, 130, 206, 0.2)'
-                ))
+                fig = go.Figure(
+                    data=[
+                        go.Scatter(x=x, y=y_init, mode='lines', name=tr('Welle', 'Wave'),
+                                  line=dict(color='#3182ce', width=3),
+                                  fill='tozeroy', fillcolor='rgba(49, 130, 206, 0.2)'),
+                    ],
+                    frames=frames
+                )
                 
-                # Einhüllende (max Amplitude)
-                y_envelope = 2 * A_wave * np.abs(np.sin(k * x))
+                # Einhüllende (statisch)
                 fig.add_trace(go.Scatter(
                     x=x, y=y_envelope, mode='lines', 
                     name=tr('Einhüllende', 'Envelope'),
-                    line=dict(color='#e53e3e', width=1, dash='dash')
+                    line=dict(color='#e53e3e', width=1.5, dash='dash')
                 ))
                 fig.add_trace(go.Scatter(
                     x=x, y=-y_envelope, mode='lines', showlegend=False,
-                    line=dict(color='#e53e3e', width=1, dash='dash')
+                    line=dict(color='#e53e3e', width=1.5, dash='dash')
                 ))
                 
                 # Knoten markieren
@@ -689,22 +693,35 @@ def render_oscillations_tab():
                     marker=dict(color='red', size=12, symbol='x')
                 ))
                 
-                # Bäuche markieren
-                antinodes_y = [2 * A_wave * np.sin(k * ax) * np.cos(omega * t) 
-                               for ax in antinodes_x]
-                fig.add_trace(go.Scatter(
-                    x=antinodes_x, y=antinodes_y,
-                    mode='markers', name=tr('Bäuche', 'Antinodes'),
-                    marker=dict(color='green', size=12, symbol='diamond')
-                ))
-                
+                # Animation-Buttons
                 fig.update_layout(
                     title=tr(f"Stehende Welle - {n_mode}. Harmonische",
                             f"Standing wave - {n_mode}th harmonic"),
                     xaxis_title="x [m]",
                     yaxis_title="y [m]",
                     yaxis=dict(range=[-2.5 * A_wave, 2.5 * A_wave]),
-                    height=400
+                    height=400,
+                    updatemenus=[
+                        dict(
+                            type="buttons",
+                            showactive=False,
+                            y=1.15,
+                            x=0.5,
+                            xanchor="center",
+                            buttons=[
+                                dict(label="▶️ Play",
+                                     method="animate",
+                                     args=[None, {"frame": {"duration": anim_speed, "redraw": True},
+                                                  "fromcurrent": True,
+                                                  "transition": {"duration": 0}}]),
+                                dict(label="⏸️ Pause",
+                                     method="animate",
+                                     args=[[None], {"frame": {"duration": 0, "redraw": False},
+                                                    "mode": "immediate",
+                                                    "transition": {"duration": 0}}])
+                            ]
+                        )
+                    ]
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
@@ -727,7 +744,7 @@ def render_oscillations_tab():
                 fig_modes.update_layout(
                     xaxis_title="x [m]",
                     yaxis_title=tr("Modus (versetzt)", "Mode (offset)"),
-                    height=350,
+                    height=300,
                     showlegend=True
                 )
                 
@@ -881,6 +898,12 @@ def render_oscillations_tab():
                 key="dop_c"
             )
             
+            anim_speed_dop = st.slider(
+                tr("Animationsgeschw.", "Animation speed"),
+                50, 200, 80, 10,
+                key="dop_speed"
+            )
+            
             st.markdown("---")
             
             # Doppler-Frequenzen berechnen
@@ -896,118 +919,150 @@ def render_oscillations_tab():
                 st.metric(tr("Mach-Zahl", "Mach number"), f"{mach:.2f}")
             else:
                 st.warning(tr(
-                    "⚠️ Überschallgeschwindigkeit! Machkegel entsteht.",
-                    "⚠️ Supersonic speed! Mach cone forms."
+                    "⚠️ Überschallgeschwindigkeit!",
+                    "⚠️ Supersonic speed!"
                 ))
                 mach = abs(v_source) / v_sound
-                theta_mach = np.degrees(np.arcsin(1 / mach))
+                theta_mach = np.degrees(np.arcsin(1 / mach)) if mach > 1 else 0
                 st.metric(tr("Mach-Zahl", "Mach number"), f"{mach:.2f}")
                 st.metric(tr("Machwinkel", "Mach angle"), f"{theta_mach:.1f}°")
         
         with col_plot:
-            # Animationszeit
-            t_anim = st.slider(
-                tr("Zeit t [s]", "Time t [s]"),
-                0.0, 2.0, 1.0, 0.05,
-                key="dop_t"
-            )
+            # Animation mit Plotly Frames
+            n_frames = 60
+            t_max_anim = 2.0
+            x_source_start = -3.0
             
-            # Wellenfronten berechnen
-            x_source_start = -3.0  # Startposition
-            x_source = x_source_start + v_source * t_anim
+            frames = []
             
-            fronts = doppler_wavefronts(
-                x_source_start, 0.0, v_source, f_source, v_sound, t_anim, n_fronts=15
-            )
-            
-            fig = go.Figure()
-            
-            # Wellenfronten zeichnen
-            for i, (x_circle, y_circle, radius) in enumerate(fronts):
-                opacity = 0.8 - 0.5 * (i / len(fronts))
-                fig.add_trace(go.Scatter(
-                    x=x_circle, y=y_circle, mode='lines',
-                    line=dict(color=f'rgba(49, 130, 206, {opacity})', width=1.5),
-                    showlegend=False,
-                    hoverinfo='skip'
-                ))
-            
-            # Quelle zeichnen
-            fig.add_trace(go.Scatter(
-                x=[x_source], y=[0],
-                mode='markers+text',
-                marker=dict(size=20, color='red', symbol='circle'),
-                text=['🔊'],
-                textposition='top center',
-                name=tr('Quelle', 'Source')
-            ))
-            
-            # Bewegungspfeil
-            if v_source != 0:
-                arrow_len = 1.0 if v_source > 0 else -1.0
-                fig.add_annotation(
-                    x=x_source, y=0,
-                    ax=x_source + arrow_len, ay=0,
-                    xref='x', yref='y',
-                    axref='x', ayref='y',
-                    showarrow=True,
-                    arrowhead=2,
-                    arrowsize=1.5,
-                    arrowwidth=2,
-                    arrowcolor='red'
-                )
-            
-            # Beobachter
-            x_obs = 5.0 + v_observer * t_anim
-            fig.add_trace(go.Scatter(
-                x=[x_obs], y=[0],
-                mode='markers+text',
-                marker=dict(size=15, color='green', symbol='triangle-up'),
-                text=['👂'],
-                textposition='top center',
-                name=tr('Beobachter', 'Observer')
-            ))
-            
-            # Mach-Kegel bei Überschall
-            if abs(v_source) >= v_sound and v_source > 0:
-                theta = np.arcsin(v_sound / v_source)
-                cone_len = 10
-                fig.add_trace(go.Scatter(
-                    x=[x_source, x_source - cone_len],
-                    y=[0, cone_len * np.tan(theta)],
-                    mode='lines',
-                    line=dict(color='orange', width=2, dash='dash'),
-                    name='Mach-Kegel'
-                ))
-                fig.add_trace(go.Scatter(
-                    x=[x_source, x_source - cone_len],
-                    y=[0, -cone_len * np.tan(theta)],
-                    mode='lines',
-                    line=dict(color='orange', width=2, dash='dash'),
+            for frame_i in range(n_frames):
+                t_current = frame_i * t_max_anim / n_frames
+                
+                # Aktuelle Quellenposition
+                x_source_current = x_source_start + v_source * t_current
+                
+                # Wellenfronten für diesen Zeitpunkt
+                T_wave = 1.0 / f_source
+                n_waves = min(12, int(t_current / T_wave) + 1)
+                
+                frame_data = []
+                
+                # Wellenfronten zeichnen
+                for w in range(n_waves):
+                    t_emit = w * T_wave
+                    if t_emit > t_current:
+                        break
+                    
+                    x_emit = x_source_start + v_source * t_emit
+                    radius = v_sound * (t_current - t_emit)
+                    
+                    if radius > 0.1:
+                        theta = np.linspace(0, 2 * np.pi, 60)
+                        x_circle = x_emit + radius * np.cos(theta)
+                        y_circle = radius * np.sin(theta)
+                        
+                        opacity = max(0.2, 0.9 - 0.6 * w / max(1, n_waves))
+                        frame_data.append(go.Scatter(
+                            x=x_circle, y=y_circle, mode='lines',
+                            line=dict(color=f'rgba(49, 130, 206, {opacity})', width=1.5),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+                
+                # Quelle
+                frame_data.append(go.Scatter(
+                    x=[x_source_current], y=[0],
+                    mode='markers',
+                    marker=dict(size=18, color='red', symbol='circle'),
                     showlegend=False
                 ))
+                
+                # Beobachter
+                x_obs = 5.0 + v_observer * t_current
+                frame_data.append(go.Scatter(
+                    x=[x_obs], y=[0],
+                    mode='markers',
+                    marker=dict(size=14, color='green', symbol='triangle-up'),
+                    showlegend=False
+                ))
+                
+                # Mach-Kegel bei Überschall
+                if abs(v_source) >= v_sound and v_source > 0:
+                    theta_m = np.arcsin(v_sound / abs(v_source))
+                    cone_len = 8
+                    frame_data.append(go.Scatter(
+                        x=[x_source_current, x_source_current - cone_len],
+                        y=[0, cone_len * np.tan(theta_m)],
+                        mode='lines',
+                        line=dict(color='orange', width=2, dash='dash'),
+                        showlegend=False
+                    ))
+                    frame_data.append(go.Scatter(
+                        x=[x_source_current, x_source_current - cone_len],
+                        y=[0, -cone_len * np.tan(theta_m)],
+                        mode='lines',
+                        line=dict(color='orange', width=2, dash='dash'),
+                        showlegend=False
+                    ))
+                
+                frames.append(go.Frame(data=frame_data, name=str(frame_i)))
+            
+            # Initiales Layout
+            fig = go.Figure(
+                data=[
+                    go.Scatter(x=[x_source_start], y=[0], mode='markers',
+                              marker=dict(size=18, color='red'), name=tr('Quelle', 'Source')),
+                    go.Scatter(x=[5.0], y=[0], mode='markers',
+                              marker=dict(size=14, color='green', symbol='triangle-up'), 
+                              name=tr('Beobachter', 'Observer'))
+                ],
+                frames=frames
+            )
             
             fig.update_layout(
-                title=tr("Doppler-Effekt Visualisierung", "Doppler Effect Visualization"),
-                xaxis_title="x [m]",
-                yaxis_title="y [m]",
-                xaxis=dict(range=[-8, 10]),
-                yaxis=dict(range=[-6, 6], scaleanchor="x", scaleratio=1),
-                height=500,
-                showlegend=True
+                title=tr("Doppler-Effekt Animation", "Doppler Effect Animation"),
+                xaxis=dict(range=[-8, 10], title="x [m]"),
+                yaxis=dict(range=[-6, 6], title="y [m]", scaleanchor="x", scaleratio=1),
+                height=450,
+                showlegend=True,
+                legend=dict(x=0.02, y=0.98),
+                updatemenus=[
+                    dict(
+                        type="buttons",
+                        showactive=False,
+                        y=1.15,
+                        x=0.5,
+                        xanchor="center",
+                        buttons=[
+                            dict(label="▶️ Play",
+                                 method="animate",
+                                 args=[None, {"frame": {"duration": anim_speed_dop, "redraw": True},
+                                              "fromcurrent": True,
+                                              "transition": {"duration": 0},
+                                              "mode": "immediate"}]),
+                            dict(label="⏸️ Pause",
+                                 method="animate",
+                                 args=[[None], {"frame": {"duration": 0, "redraw": False},
+                                                "mode": "immediate"}]),
+                            dict(label="🔄 Reset",
+                                 method="animate",
+                                 args=[["0"], {"frame": {"duration": 0, "redraw": True},
+                                               "mode": "immediate"}])
+                        ]
+                    )
+                ]
             )
             
             st.plotly_chart(fig, use_container_width=True)
             
             # Frequenz-Zeit-Diagramm
-            st.markdown(f"**{tr('Frequenzverlauf für Vorbeifahrt', 'Frequency during pass-by')}**")
+            st.markdown(f"**{tr('Frequenzverlauf bei Vorbeifahrt', 'Frequency during pass-by')}**")
             
             t_pass = np.linspace(-2, 2, 500)
             x_source_t = v_source * t_pass
             x_obs_fixed = 5.0
             
             # Abstand Quelle-Beobachter
-            r_t = np.sqrt((x_obs_fixed - x_source_t)**2 + 0.5**2)  # 0.5m seitlicher Abstand
+            r_t = np.sqrt((x_obs_fixed - x_source_t)**2 + 0.5**2)
             
             # Radialgeschwindigkeit
             v_radial = v_source * (x_source_t - x_obs_fixed) / r_t
@@ -1022,6 +1077,7 @@ def render_oscillations_tab():
                 x=t_pass, y=f_doppler,
                 mode='lines',
                 line=dict(color='#3182ce', width=3),
+                fill='tozeroy', fillcolor='rgba(49, 130, 206, 0.2)',
                 name='f(t)'
             ))
             
@@ -1034,14 +1090,12 @@ def render_oscillations_tab():
             fig_freq.update_layout(
                 xaxis_title="t [s]",
                 yaxis_title="f [Hz]",
-                height=300
+                height=250
             )
             
             st.plotly_chart(fig_freq, use_container_width=True)
             
             st.caption(tr(
-                "💡 Beim Vorbeiffahren fällt die Frequenz von f_high auf f_low ab "
-                "(typischer 'Sireneneffekt').",
-                "💡 During pass-by, frequency drops from f_high to f_low "
-                "(typical 'siren effect')."
+                "💡 Klicke ▶️ Play für die Animation. Die Frequenz fällt beim Vorbeifahren ab.",
+                "💡 Click ▶️ Play for animation. Frequency drops during pass-by."
             ))
