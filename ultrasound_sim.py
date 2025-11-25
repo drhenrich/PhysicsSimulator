@@ -205,27 +205,49 @@ def das_beamform(
     ensembles, Nch, Nt = rf.shape
     if apod is None:
         apod = np.ones(Nch, dtype=np.float64)
-    apod = apod.reshape(1, Nch, 1)  # broadcast
+    apod_flat = apod.flatten()  # ensure 1D array of length Nch
 
+    nz = Zimg.shape[0]
+    nx = Ximg.shape[1]
+    
     # output envelope (per ensemble), then average later if needed
-    img_env = np.zeros((ensembles, Ximg.shape[1], Ximg.shape[0]), dtype=np.float32)  # (ens, nx, nz)
+    img_env = np.zeros((ensembles, nx, nz), dtype=np.float32)  # (ens, nx, nz)
+
+    dt = float(t[1] - t[0]) if Nt > 1 else 1.0
+    t0 = float(t[0])
 
     for e in range(ensembles):
-        for ix in range(Ximg.shape[1]):
+        rf_e = rf[e]  # (Nch, Nt)
+        for ix in range(nx):
             x = Ximg[0, ix]
-            # distances from each element to pixels along depth column
-            dx = (x_elems - x)[None, :]  # (1,Nch)
-            z = Zimg[:, ix][:, None]     # (nz,1)
-            r_rx = np.sqrt(dx*dx + z*z)  # (nz,Nch)
-            r_tx = np.sqrt((0.0 - x)**2 + z*z)  # from center; (nz,)
-            tau = (r_tx[:, None] + r_rx)/medium.c  # (nz,Nch)
-            t_query = tau  # seconds
-            # sample each channel with linear interpolation
-            rf_ch = rf[e]  # (Nch, Nt)
-            col_sum = np.zeros((Zimg.shape[0],), dtype=np.float64)
-            for ch in range(Nch):
-                samples = lin_interp(rf_ch[ch:ch+1, :], t, t_query[:, ch])  # (1,nz) -> (1,nz)
-                col_sum += apod.flatten()[ch] * samples.flatten()
+            z_col = Zimg[:, ix]  # (nz,)
+            
+            # distances from center (TX) to each depth point
+            r_tx = np.sqrt(x**2 + z_col**2)  # (nz,)
+            
+            col_sum = np.zeros(nz, dtype=np.float64)
+            
+            for ich in range(Nch):
+                xe = x_elems[ich]
+                # distance from element to each depth point
+                r_rx = np.sqrt((xe - x)**2 + z_col**2)  # (nz,)
+                
+                # total travel time
+                tau = (r_tx + r_rx) / medium.c  # (nz,)
+                
+                # convert to sample indices
+                idx_float = (tau - t0) / dt
+                idx0 = np.clip(np.floor(idx_float).astype(np.int64), 0, Nt - 2)
+                w = idx_float - idx0
+                w = np.clip(w, 0.0, 1.0)
+                
+                # linear interpolation
+                s0 = rf_e[ich, idx0]
+                s1 = rf_e[ich, np.minimum(idx0 + 1, Nt - 1)]
+                samples = (1.0 - w) * s0 + w * s1
+                
+                col_sum += apod_flat[ich] * samples
+            
             # envelope of beamformed column
             env_col = np.abs(analytic_signal(col_sum))
             img_env[e, ix, :] = env_col.astype(np.float32)
