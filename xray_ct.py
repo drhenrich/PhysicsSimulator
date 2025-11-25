@@ -1,4 +1,3 @@
-
 # ============================================================
 # xray_ct.py — Minimal didactic X-ray / CT core
 # API used by ui_xray_ct.py:

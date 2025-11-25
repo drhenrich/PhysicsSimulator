@@ -6,6 +6,9 @@ from sim_core_bundle import plot_trajectory_3d, plot_conservation_laws, plot_col
 from ui_mech_bundle import render_mech_astro_tab
 from ui_optics_bundle import render_optics_combo_tab
 from ui_med_bundle import render_ct_safe_tab, render_xray_ct_tab, render_mri_bloch_tab, render_em_tab
+from ui_thermo_bundle import render_thermo_tab
+from ui_atom_bundle import render_atom_tab
+from ui_ultrasound import render_ultrasound_tab
 
 st.set_page_config(page_title=get_text("title", "de"), page_icon="🧩", layout="wide", initial_sidebar_state="expanded")
 
@@ -38,9 +41,12 @@ lang = st.session_state.language
 
 tabs_labels = [
     get_text("mechanics", lang) or "Mechanik & Himmelsmechanik",
+    get_text("thermodynamics", lang) or "Thermodynamik",
+    get_text("atom_physics", lang) or "Atomphysik",
     get_text("optics", lang) or "Optik",
     get_text("xray_ct_classic", lang) or "Xray/CT",
     get_text("mri_imaging", lang) or "MRI & Bloch",
+    get_text("ultrasound", lang) or "Ultraschall",
     get_text("electromagnetism", lang) or "Elektrodynamik"
 ]
 selected_tabs = st.tabs(tabs_labels)
@@ -72,29 +78,44 @@ with selected_tabs[0]:
                 fig_col = plot_collision_analysis(sim.collision_events)
                 if fig_col is not None: st.plotly_chart(fig_col, use_container_width=True)
 
-# Tab 1: Optics
+# Tab 1: Thermodynamics (NEU!)
 with selected_tabs[1]:
     st.markdown(f"# {tabs_labels[1]}")
-    render_optics_combo_tab()
+    render_thermo_tab()
 
-# Tab 2: Xray/CT combined
+# Tab 2: Atom Physics (NEU!)
 with selected_tabs[2]:
     st.markdown(f"# {tabs_labels[2]}")
+    render_atom_tab()
+
+# Tab 3: Optics
+with selected_tabs[3]:
+    st.markdown(f"# {tabs_labels[3]}")
+    render_optics_combo_tab()
+
+# Tab 4: Xray/CT combined
+with selected_tabs[4]:
+    st.markdown(f"# {tabs_labels[4]}")
     subtab_classic, subtab_safe = st.tabs(["Klassisch", "Reduziert"])
     with subtab_classic:
         render_xray_ct_tab()
     with subtab_safe:
         render_ct_safe_tab()
 
-# Tab 3: MRI & Bloch
-with selected_tabs[3]:
-    st.markdown(f"# {tabs_labels[3]}")
+# Tab 5: MRI & Bloch
+with selected_tabs[5]:
+    st.markdown(f"# {tabs_labels[5]}")
     render_mri_bloch_tab()
 
-# Tab 4: Electrodynamics
-with selected_tabs[4]:
-    st.markdown(f"# {tabs_labels[4]}")
+# Tab 6: Ultrasound (NEU!)
+with selected_tabs[6]:
+    st.markdown(f"# {tabs_labels[6]}")
+    render_ultrasound_tab()
+
+# Tab 7: Electrodynamics
+with selected_tabs[7]:
+    st.markdown(f"# {tabs_labels[7]}")
     render_em_tab()
 
 st.markdown("---")
-st.markdown("🧩 Physics Simulator | Bilingual Edition")
+st.markdown("🧩 Physics Simulator | Bilingual Edition | v4.0 mit Mechanik, Thermodynamik, Atomphysik & Ultraschall")

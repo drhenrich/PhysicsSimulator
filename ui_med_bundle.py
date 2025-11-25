@@ -54,8 +54,10 @@ def render_xray_ct_tab():
         st.error(f"Xray/CT core not available: {e}"); return
     lang = st.session_state.get("language", "de"); tr = lambda de, en: de if lang == "de" else en
     st.subheader(tr("Röntgen / CT-Physik (Schnellmodus)", "Xray/CT physics (fast)"))
-    def to_gray_img(A: np.ndarray):
-        A = np.nan_to_num(A, nan=0.0, posinf=0.0, neginf=0.0); A = A - A.min(); A = A / (A.max() + 1e-12); img = (A * 255.0).astype("uint8"); return np.repeat(img[..., None], 3, axis=2)
+    def to_gray_img(A: np.ndarray, invert: bool = False):
+        A = np.nan_to_num(A, nan=0.0, posinf=0.0, neginf=0.0); A = A - A.min(); A = A / (A.max() + 1e-12)
+        if invert: A = 1.0 - A
+        img = (A * 255.0).astype("uint8"); return np.repeat(img[..., None], 3, axis=2)
     with st.form("ct_form_fast"):
         col1, col2 = st.columns([2,1], gap="large")
         with col2:
@@ -105,7 +107,7 @@ def render_xray_ct_tab():
         st.image(to_gray_img(I), caption=tr("Sinogramm (−ln(I/I0) vor Filter, skaliert)", "Sinogram (−ln(I/I0) pre-filter, scaled)"), use_container_width=True)
         if I.shape[0] >= 3:
             I0 = max(1e-3, float(np.max(I))); sino_log = -np.log(np.clip(I/I0, 1e-6, 1.0))
-            R = Reconstructor(method="fbp"); rec = R.fbp(sino_log, thetas, (N, N)); st.image(to_gray_img(rec, invert=False), caption=tr("Rekonstruktion μ (normiert)", "Reconstruction μ (normalized)"), use_container_width=True)
+            R = Reconstructor(method="fbp"); rec = R.fbp(sino_log, thetas, (N, N)); st.image(to_gray_img(rec), caption=tr("Rekonstruktion μ (normiert)", "Reconstruction μ (normalized)"), use_container_width=True)
             mu_w = float(np.mean(MaterialDB().mu_water(spec.effective_energy()))); hu = to_hu(rec, mu_w)
             hu_disp = (hu - np.percentile(hu, 5)) / (np.percentile(hu, 95)-np.percentile(hu, 5)+1e-12); hu_disp = np.clip(hu_disp, 0, 1)
             st.image(to_gray_img(hu_disp), caption=tr("HU-Karte (skaliert für Anzeige)", "HU map (scaled for display)"), use_container_width=True)
