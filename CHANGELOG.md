@@ -1,126 +1,73 @@
 # Changelog
 
-Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+Alle wesentlichen Änderungen an diesem Projekt werden hier dokumentiert.
 
-Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
-und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
-
----
-
-## [5.0.0] - 2024-11-25
+## [6.0] - 2024-11
 
 ### Hinzugefügt
-- **Ultraschall-Modul** (`ultrasound_sim.py`, `ui_ultrasound.py`)
-  - B-Mode Bildgebung mit Delay-and-Sum Beamforming
-  - Punktstreuer-PSF Analyse
-  - Carotis-Phantom mit laminarer Strömung
-  - Farbdoppler mit Kasai-Autocorrelation
-  - Lineararray-Simulation (16-128 Elemente)
-  - Apodisation (Hanning, Hamming, None)
-  - RF-Daten Export als NPZ
-- Vollständige **GitHub-Dokumentation**
-  - README.md mit Feature-Übersicht
-  - DOCUMENTATION.md mit technischen Details
-  - LICENSE (MIT)
-  - CHANGELOG.md
+- **Schwingungen & Akustik Modul** (~1100 Zeilen)
+  - Gedämpfter harmonischer Oszillator
+  - Gekoppelte Oszillatoren mit Normalmoden
+  - Schwebungen mit FFT-Spektrum
+  - Stehende Wellen (animiert)
+  - Doppler-Effekt mit Wellenfronten-Animation
+  - Resonanzkurven
+
+- **Kernphysik & Strahlenschutz Modul** (~850 Zeilen)
+  - Radioaktiver Zerfall (10 Nuklide)
+  - Natürliche Zerfallsreihen (U-238, Th-232, U-235)
+  - Dosimetrie mit Abstandsgesetz
+  - Abschirmungsberechnung (5 Materialien)
+  - Dosisgrenzwerte nach StrlSchV
 
 ### Geändert
-- Hauptanwendung auf 8 Tabs erweitert
-- i18n_bundle.py um Ultraschall-Übersetzungen ergänzt
-- Versionsnummer auf 5.0 aktualisiert
+- **Alle Animationen auf Plotly-Frames umgestellt**
+  - Client-seitige Wiedergabe (bis 60 FPS)
+  - Einheitliche Play/Pause/Reset-Steuerung
+  - Keine Server-Roundtrips mehr
 
----
+- **Elektrostatik-Modul überarbeitet**
+  - Farbige Felddarstellung (wie Lehrbuch)
+  - Potential mit RdBu_r-Farbskala
+  - Feldstärke mit Viridis-Farbskala
+  - Korrigierter Feldlinien-Algorithmus
 
-## [4.0.0] - 2024-11-25
+### Behoben
+- ValueError in Elektrostatik (zip()-Funktion für Feldlinien)
+- Beamforming-Fehler in Ultraschall-Modul
 
-### Hinzugefügt
-- **Mechanik-Modul komplett neu erstellt** (`ui_mech_bundle.py`)
-  - 2D-Mechanik: Schiefer Wurf, Pendel, Federschwingung, Schiefe Ebene
-  - 3D N-Körper-Simulation mit Velocity-Verlet Integration
-  - Himmelsmechanik: Sonnensystem, Kepler-Bahnen, Lagrange-Punkte
-  - Kollisionen: 1D/2D Stöße, Billard, Newton-Wiege
-  - Figure-8 Lösung des Dreikörperproblems
-  - Echtzeit-Animationen für alle Hauptsimulationen
-
-### Geändert
-- Body2D und Body3D Datenklassen mit Trail-Unterstützung
-- NBodySimulator mit Kollisionserkennung und -auflösung
-- Sonnensystem-Daten mit echten Planetenparametern
-
----
-
-## [3.0.0] - 2024-11-24
+## [5.0] - 2024-10
 
 ### Hinzugefügt
-- **Atomphysik-Modul** (`ui_atom_bundle.py`)
-  - Bohr-Modell für H, He⁺, Li²⁺ (Z=1-3)
-  - Animierte Elektronenübergänge
-  - Photoeffekt mit 7 Materialien
-  - Franck-Hertz Experiment (Hg, Ne)
-  - Emissions- und Absorptionsspektren
-  - Spektralserien (Lyman, Balmer, Paschen, Brackett, Pfund)
+- Ultraschall-Modul
+- GitHub-Dokumentation (README, DOCUMENTATION)
+- MIT-Lizenz
 
-### Geändert
-- Tab-Struktur auf 7 Tabs erweitert
-- Übersetzungen für Atomphysik ergänzt
-
----
-
-## [2.0.0] - 2024-11-24
+## [4.0] - 2024-09
 
 ### Hinzugefügt
-- **Thermodynamik-Modul** (`ui_thermo_bundle.py`)
-  - 1D/2D Wärmeleitung mit explizitem Euler-Verfahren
-  - Zustandsänderungen (isotherm, isobar, isochor, adiabatisch)
-  - Carnot- und Otto-Kreisprozesse
-  - Gaskinetik mit Maxwell-Boltzmann-Verteilung
-  - Echtzeit-Animationen für Wärmeleitung und Teilchenbewegung
+- Mechanik-Modul (~1400 Zeilen)
+  - 3D N-Körper-Simulation
+  - Stoßsimulationen (1D/2D)
+  - Billard-Simulation
+  - Newton-Wiege
 
-### Geändert
-- Modulare Architektur eingeführt
-- UI von Physik-Code getrennt
-
----
-
-## [1.0.0] - 2024-11-24
+## [3.0] - 2024-08
 
 ### Hinzugefügt
-- Initiale Version des Physics Teaching Simulator
-- **Mechanik-Modul** (Grundversion)
-  - Einfache Mehrkörpersimulation
-  - Presets für typische Szenarien
-- **Optik-Modul** (`ui_optics_bundle.py`)
-  - Geometrische Optik
-  - Ray-Tracing
-- **Medizintechnik-Module**
-  - MRI & Bloch-Gleichungen (`ui_med_bundle.py`)
-  - Röntgen & CT (`xray_ct.py`)
-- **Elektrodynamik-Modul**
-  - E-Feld und B-Feld Visualisierung
-- **Internationalisierung** (`i18n_bundle.py`)
-  - Deutsch und Englisch
-- **Kern-Physikfunktionen** (`sim_core_bundle.py`)
-  - Simulator-Klasse
-  - Presets
-  - Plotting-Funktionen
+- Atomphysik-Modul
+- Optik-Modul
+- MRI & Bloch-Gleichungen
 
----
+## [2.0] - 2024-07
 
-## Versionsschema
+### Hinzugefügt
+- Thermodynamik-Modul
+- CT-Rekonstruktion
 
-- **MAJOR**: Inkompatible API-Änderungen oder neue Hauptmodule
-- **MINOR**: Neue Funktionen, abwärtskompatibel
-- **PATCH**: Bugfixes, kleine Verbesserungen
+## [1.0] - 2024-06
 
----
-
-## Geplante Features
-
-- [ ] PET/SPECT Simulation
-- [ ] Quantenmechanik (Wellenfunktionen, Tunneleffekt)
-- [ ] Akustik (Raumakustik, Resonanz, Chladni-Figuren)
-- [ ] Quiz-Modus mit automatischer Auswertung
-- [ ] CSV/JSON Export für alle Simulationen
-- [ ] Drag-and-Drop Objekteditor
-- [ ] Dark Mode
-- [ ] Mobile-optimierte Ansicht
+### Erstveröffentlichung
+- Grundstruktur mit Streamlit
+- Internationalisierung (DE/EN)
+- Basis-Mechanik
